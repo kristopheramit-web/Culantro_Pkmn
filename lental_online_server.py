@@ -186,6 +186,27 @@ async def websocket_endpoint(ws: WebSocket):
             CLIENTS.remove(ws)
 
 # --- MATHEMATICAL HEURISTIC BOT ENGINE ---
+def resolve_syndicate_boss_battle(state: GameState, pid: str, ndata: dict) -> bool:
+    """Handles combat for bots or players against syndicate bosses or Mega Darkrai."""
+    p = state.players.get(pid)
+    if not p:
+        return False
+    boss = ndata.get("syndicate_boss") or ndata.get("boss")
+    if not boss or boss.get("defeated"):
+        return False
+    
+    # Bot/Player combat resolution
+    boss["defeated"] = True
+    if ndata.get("syndicate_boss"):
+        ndata["syndicate_boss"] = None
+        
+    state.chat_log.append({"sender": "Combat Engine", "msg": f"{p['name']} defeated {boss['name']}!"})
+    if boss.get("id") == "Super_Illumina_Mega_Darkrai":
+        state.game_over_victory = True
+        state.status = "COMPLETED"
+    state.persist()
+    return True
+
 def process_ai_bot_turns(state: GameState):
     """
     Automates turns for any registered AI bot players using distance heuristics
@@ -453,4 +474,6 @@ async def download_offline_binary(request: Request):
 async def index():
     if os.path.exists("lental_ui.html"):
         with open("lental_ui.html", "r", encoding="utf-8") as f:
+            return f.read()
+    return "<h3>Frontend lental_ui.html not found. Please create File 6!</h3>"
     
