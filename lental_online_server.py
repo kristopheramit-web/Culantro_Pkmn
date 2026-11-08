@@ -185,6 +185,47 @@ async def websocket_endpoint(ws: WebSocket):
         if ws in CLIENTS:
             CLIENTS.remove(ws)
 
+# --- MATHEMATICAL HEURISTIC BOT ENGINE ---
+def process_ai_bot_turns(state: GameState):
+    """
+    Automates turns for any registered AI bot players using distance heuristics
+    toward the nearest uncalmed Illumina node or active syndicate boss.
+    """
+    for pid, p in state.players.items():
+        if not p.get("is_bot"):
+            continue
+        
+        # 1. Roll dice if not rolled
+        if not p["rolled_this_round"]:
+            base = random.randint(1, 6)
+            p["moves_left"] = base + (2 if p["role"] == "runner" else 0)
+            p["rolled_this_round"] = True
+            state.chat_log.append({"sender": p["name"], "msg": f"[Bot] Rolled a {base} (Moves: {p['moves_left']})"})
+
+        # 2. Move toward target node (nearest Illumina or Syndicate boss)
+        while p["moves_left"] > 0:
+            curr_node = state.nodes[str(p["node"])]
+            edges = curr_node["edges"]
+            if not edges:
+                break
+            
+            # Find target: nearest node with an active boss or uncalmed illumina
+            target_nid = min(edges, key=lambda n: abs(state.nodes[str(n)]["x"] - curr_node["x"]))
+            p["node"] = target_nid
+            p["moves_left"] -= 1
+
+        # 3. Execute combat or wild action if on target node
+        ndata = state.nodes[str(p["node"])]
+        if ndata.get("syndicate_boss") or ndata.get("boss"):
+            # Trigger bot combat
+            resolve_syndicate_boss_battle(state, pid, ndata)
+        elif ndata["type"] == "wild" and len(p["team"]) < 3:
+            w = random.choice(WILD_POKEDEX_150.get(ndata["region"], WILD_POKEDEX_150["Florio"]))
+            p["team"].append({"name": w["name"], "bp": w["bp"], "level": 1, "exp": 0, "fainted": False})
+            state.chat_log.append({"sender": p["name"], "msg": f"[Bot] Partnered up with wild {w['name']}!"})
+        
+        p["ready_next_round"] = True
+
 async def handle_websocket_actions(ws: WebSocket, data: dict, state: GameState):
     action = data.get("action")
     pid = data.get("player_id")
