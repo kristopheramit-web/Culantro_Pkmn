@@ -286,6 +286,20 @@ async def handle_websocket_actions(ws: WebSocket, data: dict, state: GameState):
             state.players[pid]["name"] = data.get("name", state.players[pid]["name"])[:18]
             state.players[pid]["role"] = data.get("role", state.players[pid]["role"])
 
+    elif action == "ADD_BOT":
+        bot_id = f"bot_{len(state.players)+1}"
+        bot_name = f"Bot Ranger {len(state.players)+1}"
+        starter = random.choice(WILD_POKEDEX_150["Florio"][:4])
+        starter["level"] = 1
+        starter["exp"] = 0
+        starter["fainted"] = False
+        state.players[bot_id] = {
+            "id": bot_id, "name": bot_name, "role": "runner", "is_bot": True,
+            "node": 0, "moves_left": 0, "rolled_this_round": False, "ready_next_round": True,
+            "team": [starter], "items": ["grounding_anchor"]
+        }
+        state.chat_log.append({"sender": "System", "msg": f"Mathematical Bot '{bot_name}' joined the lobby!"})
+
     elif action == "ROLL_DICE":
         p = state.players.get(pid)
         if p and not p["rolled_this_round"]:
