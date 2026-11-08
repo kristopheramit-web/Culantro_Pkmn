@@ -4,8 +4,8 @@ import json
 import subprocess
 import urllib.request
 
-CF_API_TOKEN = os.environ.get("CF_API_TOKEN", "")
-CF_ACCOUNT_ID = os.environ.get("CF_ACCOUNT_ID", "")
+CF_API_TOKEN = os.environ.get("", "")
+CF_ACCOUNT_ID = os.environ.get("", "")
 DOMAIN_NAME = "drft.stream"
 
 def push_game_state_to_cloudflare(state_dict: dict) -> bool:
