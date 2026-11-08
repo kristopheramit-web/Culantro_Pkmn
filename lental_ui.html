@@ -1,0 +1,363 @@
+<!-- lental_ui.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Culantro Region Pokémon Board Game - drft.stream</title>
+<style>
+  :root {
+    --glass-bg: rgba(19, 28, 39, 0.78);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --accent-blue: #388bfd;
+    --accent-green: #238636;
+    --accent-red: #da3633;
+    --accent-gold: #b8860b;
+  }
+  body {
+    margin: 0; font-family: 'Segoe UI', system-ui, sans-serif;
+    background: radial-gradient(circle at 50% 20%, #1b2a47, #0a0f16 75%);
+    color: #e6edf3; min-height: 100vh;
+  }
+  header {
+    background: var(--glass-bg); backdrop-filter: blur(12px);
+    padding: 10px 20px; display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid var(--glass-border); flex-wrap: wrap; gap: 10px;
+  }
+  .badge { background: rgba(56, 139, 253, 0.25); border: 1px solid var(--accent-blue); padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 12px; margin-left: 6px; }
+  .main-grid { display: grid; grid-template-columns: 310px 1fr 340px; gap: 12px; padding: 12px; max-width: 1720px; margin: 0 auto; }
+  .panel {
+    background: var(--glass-bg); backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border); border-radius: 12px; padding: 14px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4); display: flex; flex-direction: column; gap: 10px; position: relative;
+  }
+  #boardCanvas { background: radial-gradient(circle at 50% 45%, #16425b, #071722 85%); border-radius: 10px; width: 100%; height: 610px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; }
+  #wheelCanvas { background: rgba(11, 17, 24, 0.85); border-radius: 10px; border: 1px solid var(--glass-border); align-self: center; }
+  input, select, button {
+    background: rgba(11, 17, 24, 0.85); color: #fff; border: 1px solid var(--glass-border);
+    padding: 7px 10px; border-radius: 6px; font-size: 12.5px; backdrop-filter: blur(6px);
+  }
+  button { background: var(--accent-green); border-color: #2ea043; cursor: pointer; font-weight: 600; transition: transform 0.08s, filter 0.1s; }
+  button:hover { filter: brightness(1.15); }
+  button:active { transform: scale(0.97); }
+  button.secondary { background: var(--accent-blue); border-color: #58a6ff; }
+  button.warn { background: var(--accent-red); border-color: #f85149; }
+  button.gold { background: var(--accent-gold); border-color: #ffd166; color: #fff; }
+  .chat-box { height: 175px; overflow-y: auto; background: rgba(8, 12, 17, 0.85); padding: 8px; border-radius: 6px; font-size: 12px; border: 1px solid var(--glass-border); }
+  .player-card { background: rgba(11, 17, 24, 0.65); border: 1px solid var(--glass-border); padding: 8px; border-radius: 8px; font-size: 12px; }
+  .sprite-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .mini-sprite { width: 34px; height: 34px; image-rendering: pixelated; background: rgba(22, 34, 48, 0.8); border-radius: 6px; border: 1px solid var(--glass-border); }
+  
+  /* Universal Hover Tooltip */
+  #tooltipBox {
+    position: absolute; display: none; background: rgba(13, 19, 26, 0.95); border: 1px solid var(--accent-blue);
+    padding: 8px 12px; border-radius: 6px; font-size: 11.5px; z-index: 1000; pointer-events: none; max-width: 240px; box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+  }
+
+  /* Modals */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; z-index: 999; padding: 20px; }
+  .modal-box { background: #131c27; border: 2px solid var(--accent-blue); border-radius: 14px; max-width: 960px; width: 100%; max-height: 88vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 16px 48px rgba(0,0,0,0.7); }
+  .polaroid-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .polaroid { background: #f8f9fa; color: #1b1f23; border-radius: 8px; padding: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 6px; position: relative; }
+  .polaroid-stage { background: linear-gradient(135deg, #16425b, #0b132b); height: 105px; border-radius: 6px; display: flex; justify-content: space-around; align-items: center; }
+  .polaroid-stage img { width: 64px; height: 64px; image-rendering: pixelated; }
+  .watermark { position: absolute; bottom: 8px; right: 10px; font-size: 10px; color: #888; font-style: italic; }
+</style>
+</head>
+<body>
+<div id="tooltipBox"></div>
+<header>
+  <div>
+    <strong id="mapTitleHeader">CULANTRO REGION</strong>
+    <span class="badge" id="roundBadge">Round 1</span>
+    <span class="badge" id="modeBadge">SPECTATOR MODE</span>
+    <button class="secondary" onclick="openLibraryModal()" style="margin-left:8px;" title="Browse procedural maps & sessions">🗺️ Map Library</button>
+    <button class="gold" onclick="openAlbumModal()" style="margin-left:4px;" title="View Highlights B-Roll photo album">📸 Highlights B-Roll (<span id="photoCount">0</span>)</button>
+  </div>
+  <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+    <input type="password" id="joinCode" placeholder="Host Join Code..." style="width:115px;" title="Enter host join code (CULANTRO2026)">
+    <input type="text" id="playerName" placeholder="Trainer Name" style="width:100px;">
+    <select id="playerRole" title="Choose your Ranger partner role">
+      <option value="runner">Runner (+2 Move)</option>
+      <option value="musician">Musician (-5 Boss BP)</option>
+      <option value="nurse">Nurse (Node Heal)</option>
+      <option value="fighter">Fighter (+2 Ally BP)</option>
+      <option value="researcher">Researcher (2x XP)</option>
+      <option value="photographer">Photographer (+10% Odds)</option>
+    </select>
+    <button onclick="joinGame()">Join / Edit</button>
+  </div>
+</header>
+
+<div class="main-grid">
+  <div class="panel">
+    <h3 style="margin:0; font-size:15px;">Culantro Trainers (2-6)</h3>
+    <div id="playersList" style="display:flex; flex-direction:column; gap:8px; overflow-y:auto; max-height:400px;"></div>
+    <h3 style="margin:4px 0 0 0; font-size:15px;">Team Syndicate Radar</h3>
+    <div id="poachersList" style="display:flex; flex-direction:column; gap:6px;"></div>
+  </div>
+
+  <div class="panel" style="padding:8px;">
+    <canvas id="boardCanvas" width="980" height="610"></canvas>
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <button onclick="sendAction({action:'ROLL_DICE'})" title="Roll 1-6 movement die">🎲 Roll Dice</button>
+        <button class="secondary" onclick="sendAction({action:'WILD_ENCOUNTER_ACTION', mode:'catch'})" title="Partner with wild Pokémon (Max 3)">🔴 Partner Up</button>
+        <button class="secondary" onclick="sendAction({action:'WILD_ENCOUNTER_ACTION', mode:'battle'})" title="Battle wild Pokémon for EXP & Level-Up Evolution">⚔️ Battle for EXP</button>
+        <button class="warn" onclick="sendAction({action:'FIGHT_BOSS'})" title="Challenge Syndicate Boss or Illumina target">🔥 Fight Boss / Gauntlet!</button>
+      </div>
+      <button onclick="sendAction({action:'READY_NEXT_ROUND'})" title="Lock your turn for this round">✅ Lock Turn</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3 style="margin:0; font-size:15px; text-align:center;">Syndicate Battle Wheel</h3>
+    <canvas id="wheelCanvas" width="280" height="230"></canvas>
+    <div id="wheelStatus" class="player-card" style="text-align:center;">Waiting for battle spin...</div>
+    <div style="display:flex; gap:4px; flex-wrap:wrap; justify-content:center;">
+      <button class="secondary" onclick="sendAction({action:'USE_ABILITY_OR_ITEM', kind:'grounding_anchor'})" title="Grounds Flying types, making Fighting super effective">⚓ Grounding Anchor</button>
+      <button class="secondary" onclick="sendAction({action:'USE_ABILITY_OR_ITEM', kind:'soothe_bell'})" title="Soothe Illumina target">🔔 Soothe Bell</button>
+      <button class="secondary" onclick="sendAction({action:'USE_ABILITY_OR_ITEM', kind:'rare_candy'})" title="Boost active partner">🍬 Rare Candy</button>
+    </div>
+    <h3 style="margin:2px 0 0 0; font-size:14px;">Team Radio & Co-op Log</h3>
+    <div class="chat-box" id="chatBox"></div>
+    <div style="display:flex; gap:6px;">
+      <input type="text" id="chatInput" placeholder="Radio frequency transmission..." style="flex:1;" onkeydown="if(event.key==='Enter') sendChat()">
+      <button onclick="sendChat()">Transmit</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="libraryModal">
+  <div class="modal-box">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h2 style="margin:0;">🗺️ Procedural Culantro Region Generator & Session Library</h2>
+      <button class="warn" onclick="closeLibraryModal()">Close ✕</button>
+    </div>
+    <div class="player-card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding:12px;">
+      <div>
+        <strong style="font-size:14px;">Generate Land-Dominant Archipelago (<20% Water)</strong>
+        <div style="color:#8b949e;">Guarantees 6 encircling nodes around the Team Syndicate fortress for the Amplification Star trigger.</div>
+      </div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+        <input type="text" id="customSeedInput" placeholder="Region Name / Seed...">
+        <select id="gameModeSelect">
+          <option value="long_mode" selected>Long Game Mode (Amplification Star + Mega Darkrai)</option>
+          <option value="standard">Standard Mode</option>
+        </select>
+        <button onclick="generateNewProceduralMap()">✨ Generate Map</button>
+        <button class="secondary" onclick="loadMapFromLibrary('classic_culantro_fresh')">🔄 Reset Classic</button>
+      </div>
+    </div>
+    <h3 style="margin:0;">Saved Map Library</h3>
+    <div id="libraryList" style="display:flex; flex-direction:column; gap:8px;"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="albumModal">
+  <div class="modal-box">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+      <div>
+        <h2 style="margin:0;">📸 Highlights B-Roll Photo Album</h2>
+        <div style="font-size:12.5px; color:#8b949e;" id="albumSubtitle">Capturing your journey across the Culantro Region!</div>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="gold" onclick="downloadSnapPosterPNG()">⬇️ Download Souvenir Poster (.PNG)</button>
+        <button class="warn" onclick="closeAlbumModal()">Close ✕</button>
+      </div>
+    </div>
+    <div class="polaroid-grid" id="polaroidGallery"></div>
+  </div>
+</div>
+
+<script>
+const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+const ws = new WebSocket(wsProto + '//' + location.host + '/ws');
+let myPlayerId = localStorage.getItem('culantro_pid') || ('p_' + Math.random().toString(36).substring(2, 8));
+localStorage.setItem('culantro_pid', myPlayerId);
+let gameState = null;
+let hasShownModal = false;
+let hasAutoOpenedVictory = false;
+
+const spriteCache = {};
+function getSprite(src) {
+  if (!src) return null;
+  if (spriteCache[src]) return spriteCache[src].loaded ? spriteCache[src].img : null;
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  spriteCache[src] = { img, loaded: false };
+  img.onload = () => { spriteCache[src].loaded = true; drawBoard(); drawWheelFrame(); };
+  img.src = src;
+  return null;
+}
+
+let lastSeenSpinId = 0;
+let wheelAnim = { active: false, startTime: 0, duration: 4000, startAngle: 0, targetAngle: 0, currentAngle: 0 };
+
+ws.onmessage = (event) => {
+  const msg = JSON.parse(event.data);
+  if (msg.type === 'ERROR') { alert(msg.msg); return; }
+  if (msg.type === 'STATE_UPDATE') {
+    gameState = msg.state;
+    if (!hasShownModal) { hasShownModal = true; openLibraryModal(); }
+    if (gameState.game_over_victory && !hasAutoOpenedVictory) {
+      hasAutoOpenedVictory = true;
+      setTimeout(() => openAlbumModal(), 1200);
+    }
+    const w = gameState.last_wheel;
+    if (w && w.spin_id > lastSeenSpinId) {
+      lastSeenSpinId = w.spin_id;
+      triggerWheelSpin(w);
+    } else {
+      drawWheelFrame();
+    }
+    renderUI();
+    drawBoard();
+  }
+};
+
+function sendAction(payload) {
+  payload.player_id = myPlayerId;
+  payload.join_code = document.getElementById('joinCode').value;
+  ws.send(JSON.stringify(payload));
+}
+
+function joinGame() {
+  sendAction({
+    action: 'JOIN_OR_EDIT',
+    name: document.getElementById('playerName').value || 'Trainer',
+    role: document.getElementById('playerRole').value
+  });
+}
+
+function sendChat() {
+  const inp = document.getElementById('chatInput');
+  if (!inp.value.trim()) return;
+  const me = gameState && gameState.players[myPlayerId] ? gameState.players[myPlayerId].name : 'Spectator';
+  sendAction({action: 'CHAT', sender: me, msg: inp.value});
+  inp.value = '';
+}
+
+function openLibraryModal() { renderLibraryList(); document.getElementById('libraryModal').style.display = 'flex'; }
+function closeLibraryModal() { document.getElementById('libraryModal').style.display = 'none'; }
+function generateNewProceduralMap() {
+  const title = document.getElementById('customSeedInput').value;
+  const mode = document.getElementById('gameModeSelect').value;
+  sendAction({action: 'NEW_PROCEDURAL_MAP', custom_title: title, game_mode: mode});
+  closeLibraryModal();
+}
+function loadMapFromLibrary(mid) { sendAction({action: 'LOAD_MAP', map_id: mid}); closeLibraryModal(); }
+function deleteMapFromLibrary(mid) { if(confirm('Delete map session?')) sendAction({action: 'DELETE_MAP', map_id: mid}); }
+
+function renderLibraryList() {
+  if (!gameState || !gameState.library) return;
+  const container = document.getElementById('libraryList');
+  container.innerHTML = '';
+  gameState.library.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'player-card';
+    row.style.display = 'flex'; row.style.justifyContent = 'space-between'; row.style.alignItems = 'center';
+    const isCur = item.map_id === gameState.map_id;
+    row.innerHTML = `<div>
+        <strong style="color:${isCur?'#3fb950':'#58a6ff'};">${item.map_name} ${isCur?'(ACTIVE)':''}</strong>
+        <span class="badge" style="background:${item.status==='COMPLETED'?'#238636':'#6e40c9'}">${item.status}</span><br>
+        <span style="color:#8b949e;">Mode: <b>${(item.game_mode||'long_mode').toUpperCase()}</b> | Boss: ${item.commander_name}</span>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <button class="secondary" onclick="loadMapFromLibrary('${item.map_id}')">▶️ Play</button>
+        ${item.map_id !== 'classic_culantro' ? `<button class="warn" onclick="deleteMapFromLibrary('${item.map_id}')">🗑️ Delete</button>` : ''}
+      </div>`;
+    container.appendChild(row);
+  });
+}
+
+function openAlbumModal() { renderAlbumGallery(); document.getElementById('albumModal').style.display = 'flex'; }
+function closeAlbumModal() { document.getElementById('albumModal').style.display = 'none'; }
+
+function renderAlbumGallery() {
+  if (!gameState) return;
+  const gal = document.getElementById('polaroidGallery');
+  gal.innerHTML = '';
+  const photos = gameState.photos || [];
+  document.getElementById('albumSubtitle').innerText = `${gameState.map_name} — ${photos.length} Highlights B-Roll Captures`;
+  if (photos.length === 0) {
+    gal.innerHTML = `<div class="player-card" style="grid-column: 1 / -1; text-align:center; padding:24px;">No B-Roll highlights captured yet!</div>`;
+    return;
+  }
+  photos.forEach(ph => {
+    const card = document.createElement('div');
+    card.className = 'polaroid';
+    card.innerHTML = `
+      <div class="polaroid-stage">
+        <img src="${ph.player_sprite}" alt="Player">
+        <div style="color:#ffd166; font-weight:bold; font-size:12px; text-align:center;">VS<br><span style="font-size:10px; color:#fff;">${Math.round(ph.win_prob*100)}%</span></div>
+        <img src="${ph.enemy_sprite}" alt="Target">
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:11px; color:#b8860b; font-weight:bold;">
+        <span>${ph.stars}</span><span>Round ${ph.round}</span>
+      </div>
+      <strong style="font-size:13px; color:#111;">#${ph.id} ${ph.title}</strong>
+      <div style="font-size:11.5px; color:#444;">${ph.caption}</div>
+      <div class="watermark">© ${ph.watermark || 'Culantro Ranger'}</div>
+    `;
+    gal.appendChild(card);
+  });
+}
+
+function downloadSnapPosterPNG() {
+  if (!gameState || !gameState.photos || gameState.photos.length === 0) { alert("No photos to export!"); return; }
+  const photos = gameState.photos;
+  const cols = Math.min(3, photos.length), rows = Math.ceil(photos.length / cols);
+  const cardW = 300, cardH = 230, pad = 20;
+  const outCanvas = document.createElement('canvas');
+  outCanvas.width = cols * (cardW + pad) + pad; outCanvas.height = 90 + rows * (cardH + pad) + pad;
+  const oCtx = outCanvas.getContext('2d');
+  oCtx.fillStyle = '#0d131a'; oCtx.fillRect(0, 0, outCanvas.width, outCanvas.height);
+  oCtx.fillStyle = '#ffd166'; oCtx.font = 'bold 22px sans-serif';
+  oCtx.fillText(`CULANTRO HIGHLIGHTS B-ROLL: ${gameState.map_name.toUpperCase()}`, pad, 42);
+
+  photos.forEach((ph, idx) => {
+    const c = idx % cols, r = Math.floor(idx / cols);
+    const x = pad + c * (cardW + pad), y = 90 + r * (cardH + pad);
+    oCtx.fillStyle = '#f8f9fa'; oCtx.fillRect(x, y, cardW, cardH);
+    oCtx.fillStyle = '#16425b'; oCtx.fillRect(x + 12, y + 12, cardW - 24, 105);
+    const pImg = getSprite(ph.player_sprite); if(pImg) oCtx.drawImage(pImg, x + 32, y + 25, 72, 72);
+    const eImg = getSprite(ph.enemy_sprite); if(eImg) oCtx.drawImage(eImg, x + cardW - 104, y + 25, 72, 72);
+    oCtx.fillStyle = '#b8860b'; oCtx.font = 'bold 11px sans-serif'; oCtx.fillText(ph.stars, x + 12, y + 135);
+    oCtx.fillStyle = '#111'; oCtx.font = 'bold 13px sans-serif'; oCtx.fillText(ph.title.substring(0, 32), x + 12, y + 155);
+    oCtx.fillStyle = '#333'; oCtx.font = '11px sans-serif'; oCtx.fillText(ph.caption.substring(0, 44), x + 12, y + 178);
+    oCtx.fillStyle = '#666'; oCtx.font = 'italic 10px sans-serif'; oCtx.fillText(`© ${ph.watermark || 'Ranger'}`, x + cardW - 90, y + cardH - 10);
+  });
+  const link = document.createElement('a');
+  link.download = `Culantro_Highlights_BRoll_${gameState.map_id}.png`;
+  link.href = outCanvas.toDataURL('image/png');
+  link.click();
+}
+
+function renderUI() {
+  if (!gameState) return;
+  document.getElementById('mapTitleHeader').innerText = gameState.map_name.toUpperCase();
+  document.getElementById('roundBadge').innerText = 'Round ' + gameState.round_num;
+  document.getElementById('photoCount').innerText = (gameState.photos || []).length;
+  const me = gameState.players[myPlayerId];
+  if (me) {
+    document.getElementById('modeBadge').innerText = 'PLAYING: ' + me.name;
+    document.getElementById('modeBadge').style.background = '#238636';
+  }
+  const pList = document.getElementById('playersList');
+  pList.innerHTML = '';
+  Object.values(gameState.players).forEach(p => {
+    const teamHtml = p.team.map(pk =>
+      `<div style="display:flex; align-items:center; gap:4px; background:#162230; padding:2px 6px; border-radius:6px; opacity:${pk.fainted?0.45:1};">
+         <img class="mini-sprite" src="${pk.sprite}">
+         <span><b>${pk.name}</b> (Lvl ${pk.level || 1}, BP ${pk.bp})</span>
+       </div>`
+    ).join('');
+    const card = document.createElement('div');
+    card.className = 'player-card';
+    card.innerHTML = `<div><strong>${p.name}</strong> <span style="color:#58a6ff;">[${p.role.toUpperCase()}]</span></div>
+      <div style="color:#8b949e; margin:2px 0;">📍 ${gameState.nodes[p.node].name} | Steps: <b>${p.moves_left}</b></div>
+      <div class="sprite-row">${teamHtml}</div>`;
+    pList.appendChild(card);
+  });
+
+  const poachList = document
