@@ -34,6 +34,7 @@ OUTPOST_SPRITES = [
     "/assets/items/item_repel.png", "/assets/items/item_knife.png", "/assets/items/item_rare_candy.png"
 ]
 
+
 def ensure_bidirectional_edges(nodes: Dict[str, dict]):
     """Guarantees that if node A connects to node B, node B also connects back to node A."""
     for nid, nd in nodes.items():
@@ -50,6 +51,7 @@ def ensure_bidirectional_edges(nodes: Dict[str, dict]):
             t_edges = nodes[str(target)]["edges"]
             if n_int not in t_edges:
                 t_edges.append(n_int)
+
 
 def get_classic_culantro_nodes() -> Dict[str, dict]:
     nodes = {
@@ -70,21 +72,22 @@ def get_classic_culantro_nodes() -> Dict[str, dict]:
         "14": {"name": "Voluca Outpost", "region": "Voluca", "type": "outpost", "x": 800, "y": 360, "edges": [12, 13, 15, 17], "sprite": "/assets/items/item_rare_candy.png"},
         "15": {"name": "Fireflow Crater", "region": "Voluca", "type": "illumina", "x": 855, "y": 500, "edges": [13, 14, 16, 17], "boss": {"name": "Volcarona", "bp": 15, "type": "Fire", "sprite": "/assets/illumina/illumina_637.png", "calmed": False, "decoy": False, "soothed": 0}},
         "16": {"name": "Aurus Ruins", "region": "Aurus", "type": "illumina", "x": 700, "y": 555, "edges": [9, 15, 17], "boss": {"name": "Xerneas", "bp": 17, "type": "Fairy", "sprite": "/assets/illumina/illumina_716.png", "calmed": False, "decoy": False, "soothed": 0}},
-        "17": {"name": "Team Syndicate Fortress", "region": "Syndicate HQ", "type": "poacher_base", "x": 870, "y": 105, "edges": [10, 11, 12, 13, 14, 15, 16], "boss": {
+        "17": {"name": "Team Syndicate Fortress", "region": "Syndicate HQ", "type": "poacher_base", "x": 870, "y": 105, "edges": [10, 11, 12, 13, 14, 15], "boss": {
             "id": "Boss_Captain_B.Jack",
             "name": "Captain B.Jack",
             "full_name": "Captain Black Jack",
             "tier": 1,
             "bp": 20,
-            "type": "Flying",
+            "type": "Steel",
             "sprite": "/assets/poachers/Boss_Captain_B.Jack.png",
-            "team": list(CASINO_BOSSES["Boss_Captain_B.Jack"]["team"]),
+            "team": [dict(pk) for pk in CASINO_BOSSES["Boss_Captain_B.Jack"]["team"]],
             "dialogue": CASINO_BOSSES["Boss_Captain_B.Jack"]["dialogue"],
             "defeated": False
         }},
     }
     ensure_bidirectional_edges(nodes)
     return nodes
+
 
 def generate_procedural_map(seed_str: Optional[str] = None, game_mode: str = "long_mode") -> dict:
     if not seed_str:
@@ -254,6 +257,7 @@ def generate_procedural_map(seed_str: Optional[str] = None, game_mode: str = "lo
         "photos": [],
     }
 
+
 def load_library() -> Dict[str, dict]:
     if not os.path.exists(LIBRARY_FILE):
         classic = {
@@ -281,14 +285,17 @@ def load_library() -> Dict[str, dict]:
     except Exception:
         return {}
 
+
 def save_library(lib: Dict[str, dict]):
     with open(LIBRARY_FILE, "w", encoding="utf-8") as f:
         json.dump(lib, f, indent=2)
+
 
 def upsert_map_record(record: dict):
     lib = load_library()
     lib[record["map_id"]] = record
     save_library(lib)
+
 
 def delete_map_record(map_id: str) -> bool:
     lib = load_library()
@@ -298,27 +305,31 @@ def delete_map_record(map_id: str) -> bool:
         return True
     return False
 
+
+# Each wave uses distinct edge_idx (0..5) around Node 17 to form the 6-point Amplification Star
 HEXAGRAM_WAVES = {
     "tier_1": [
-        {"boss_key": "Boss_Captain_B.Jack", "pos": "North"},
-        {"boss_key": "Boss_Lt._Deuce", "pos": "West"},
-        {"boss_key": "Boss_Chief_J.Pot", "pos": "East"},
+        {"boss_key": "Boss_Captain_B.Jack", "pos": "North", "edge_idx": 0},
+        {"boss_key": "Boss_Lt._Deuce", "pos": "West", "edge_idx": 1},
+        {"boss_key": "Boss_Chief_J.Pot", "pos": "East", "edge_idx": 2},
     ],
     "tier_2": [
-        {"boss_key": "Boss_Marshall_Ace", "pos": "North-West"},
-        {"boss_key": "Boss_Baron_Roulette", "pos": "North-East"},
+        {"boss_key": "Boss_Marshall_Ace", "pos": "North-West", "edge_idx": 3},
+        {"boss_key": "Boss_Baron_Roulette", "pos": "North-East", "edge_idx": 4},
     ],
     "tier_3": [
-        {"boss_key": "Boss_Warden_Croupier", "pos": "South"},
+        {"boss_key": "Boss_Warden_Croupier", "pos": "South", "edge_idx": 5},
     ],
 }
+
 
 def deploy_hexagram_wave(map_record: dict, wave_name: str):
     fortress_edges = map_record["nodes"]["17"]["edges"]
     assignments = HEXAGRAM_WAVES.get(wave_name, [])
-    for idx, slot in enumerate(assignments):
-        if idx < len(fortress_edges):
-            target_nid = str(fortress_edges[idx])
+    for slot in assignments:
+        edge_idx = slot.get("edge_idx", 0)
+        if edge_idx < len(fortress_edges):
+            target_nid = str(fortress_edges[edge_idx])
             boss_meta = CASINO_BOSSES[slot["boss_key"]]
             map_record["nodes"][target_nid]["syndicate_boss"] = {
                 "id": slot["boss_key"],
@@ -334,6 +345,7 @@ def deploy_hexagram_wave(map_record: dict, wave_name: str):
                 "defeated": False,
                 "tactical_position": slot["pos"],
             }
+
 
 def check_and_advance_syndicate_wave(map_record: dict) -> str:
     all_nodes = map_record["nodes"].values()
@@ -356,6 +368,7 @@ def check_and_advance_syndicate_wave(map_record: dict) -> str:
             activate_super_illumuna_darkrai(map_record)
             return "DARKRAI_SPAWNED"
     return "IN_PROGRESS"
+
 
 def activate_super_illumuna_darkrai(map_record: dict):
     map_record["map_shroud"] = "DARKNESS_SHROUD"
