@@ -30,23 +30,24 @@ import fetch_assets
 
 app = FastAPI(title="Culantro Region Pokémon Board Game - drft.stream")
 
-# Ensure asset directories and default placeholder PNGs exist on boot
 for d in fetch_assets.ASSET_DIRS:
     os.makedirs(d, exist_ok=True)
 fetch_assets.generate_default_placeholders()
 fetch_assets.generate_boss_avatars()
+if not os.path.exists("assets/map/culantro_3d_map.png"):
+    fetch_assets.generate_3d_archipelago_background()
 
 
 @app.get("/assets/{category}/{filename}")
 async def serve_asset_with_fallback(category: str, filename: str):
-    """
-    Serves the requested sprite from disk, or dynamically creates a labeled placeholder PNG
-    if the file hasn't been downloaded yet so the browser never receives a 404 error.
-    """
     safe_cat = os.path.basename(category)
     safe_file = os.path.basename(filename)
     target_path = os.path.join("assets", safe_cat, safe_file)
     if not os.path.exists(target_path) or os.path.getsize(target_path) == 0:
+        if safe_cat == "pokemon_back":
+            front_equiv = os.path.join("assets", "pokemon", safe_file)
+            if os.path.exists(front_equiv) and os.path.getsize(front_equiv) > 0:
+                return FileResponse(front_equiv)
         fetch_assets.create_placeholder_png(target_path, category=safe_cat, title=safe_file)
     return FileResponse(target_path)
 
@@ -64,11 +65,51 @@ ROLES = {
     "photographer": {"name": "Photographer", "desc": "Flash Stun: +10% bonus win odds on wheel spins"},
 }
 
+TYPE_CHART = {
+    "Water": {"strong": ["Fire", "Ground", "Rock"], "weak": ["Water", "Grass", "Dragon"]},
+    "Fire": {"strong": ["Grass", "Ice", "Bug", "Steel"], "weak": ["Water", "Rock", "Dragon"]},
+    "Grass": {"strong": ["Water", "Ground", "Rock"], "weak": ["Fire", "Ice", "Poison", "Flying", "Bug"]},
+    "Ice": {"strong": ["Grass", "Ground", "Flying", "Dragon"], "weak": ["Fire", "Water", "Steel"]},
+    "Fighting": {"strong": ["Normal", "Ice", "Rock", "Steel", "Dark"], "weak": ["Flying", "Psychic", "Fairy"]},
+    "Fairy": {"strong": ["Fighting", "Dragon", "Dark"], "weak": ["Steel", "Fire", "Poison"]},
+    "Dragon": {"strong": ["Dragon"], "weak": ["Ice", "Fairy", "Steel"]},
+    "Dark": {"strong": ["Psychic", "Ghost"], "weak": ["Fighting", "Fairy", "Bug"]},
+    "Psychic": {"strong": ["Fighting", "Poison"], "weak": ["Dark", "Bug", "Steel"]},
+    "Rock": {"strong": ["Fire", "Ice", "Flying", "Bug"], "weak": ["Water", "Grass", "Fighting", "Ground", "Steel"]},
+    "Ground": {"strong": ["Fire", "Rock", "Steel", "Poison"], "weak": ["Grass", "Bug", "Water"]},
+    "Steel": {"strong": ["Ice", "Rock", "Fairy"], "weak": ["Fire", "Water", "Fighting", "Ground"]},
+    "Flying": {"strong": ["Grass", "Fighting", "Bug"], "weak": ["Rock", "Steel", "Ice"]},
+    "Poison": {"strong": ["Grass", "Fairy"], "weak": ["Ground", "Rock", "Ghost", "Steel"]},
+    "Ghost": {"strong": ["Psychic", "Ghost"], "weak": ["Dark"]},
+    "Bug": {"strong": ["Grass", "Psychic", "Dark"], "weak": ["Fire", "Flying", "Rock"]},
+    "Normal": {"strong": [], "weak": ["Rock", "Steel"]},
+}
+
+SIGNATURE_MOVES = {
+    "Fire": {"move": "Flamethrower", "anim": "FIRE_BLAST"},
+    "Water": {"move": "Hydro Cannon", "anim": "WATER_PULSE"},
+    "Grass": {"move": "Solar Blade", "anim": "LEAF_STORM"},
+    "Dragon": {"move": "Hyper Beam", "anim": "HYPER_BEAM"},
+    "Psychic": {"move": "Spoon Bend", "anim": "PSYCHIC_WAVE"},
+    "Dark": {"move": "Dark Pulse", "anim": "SHADOW_SURGE"},
+    "Ghost": {"move": "Shadow Ball", "anim": "SHADOW_SURGE"},
+    "Flying": {"move": "Hurricane Wing", "anim": "WING_GUST"},
+    "Ice": {"move": "Blizzard Lance", "anim": "ICE_SHARD"},
+    "Steel": {"move": "Iron Bash", "anim": "STEEL_SLAM"},
+    "Rock": {"move": "Stone Edge", "anim": "ROCK_SMASH"},
+    "Ground": {"move": "Earthquake", "anim": "ROCK_SMASH"},
+    "Fighting": {"move": "Sky Uppercut", "anim": "PUNCH_FLURRY"},
+    "Fairy": {"move": "Moonblast", "anim": "STAR_BEAM"},
+    "Poison": {"move": "Venom Strike", "anim": "SHADOW_SURGE"},
+    "Bug": {"move": "X-Scissor", "anim": "LUNGE_SLASH"},
+    "Normal": {"move": "High-Speed Lunge", "anim": "LUNGE_SLASH"},
+}
+
 ITEMS_META = {
     "fluffruit": {
         "name": "Fluffruit",
         "sprite": "/assets/items/item_fluffruit.png",
-        "desc": "Revives a fainted partner and grants +1.0 BP.",
+        "desc": "Revives fainted partners and grants +1.0 BP to your Lead.",
     },
     "soothe_bell": {
         "name": "Soothe Bell",
@@ -83,7 +124,7 @@ ITEMS_META = {
     "knife": {
         "name": "Combat Knife",
         "sprite": "/assets/items/item_knife.png",
-        "desc": "Grants +4.0 BP during your next Boss battle (auto-used in combat or click to equip).",
+        "desc": "Grants +4.0 BP during your next Boss battle (auto-used or click to equip).",
     },
     "grounding_anchor": {
         "name": "Grounding Anchor",
@@ -93,17 +134,17 @@ ITEMS_META = {
     "rare_candy": {
         "name": "Rare Candy",
         "sprite": "/assets/items/item_rare_candy.png",
-        "desc": "Grants +25 EXP to your lead Pokémon, triggering level-up & evolution!",
+        "desc": "Grants +25 EXP to your Lead Pokémon, triggering level-up & evolution!",
     },
     "decoy": {
         "name": "Decoy Doll",
         "sprite": "/assets/items/item_decoy.png",
-        "desc": "Protects your team from fainting if you lose a battle spin.",
+        "desc": "Protects your Lead Pokémon from fainting if you lose a battle spin.",
     },
     "karate_trophy": {
         "name": "Karate Trophy",
         "sprite": "/assets/items/item_karate_trophy.png",
-        "desc": "Permanently trains your lead Pokémon for +2.5 BP.",
+        "desc": "Permanently trains your Lead Pokémon for +2.5 BP.",
     },
     "illumina_orb": {
         "name": "Illumina Orb",
@@ -113,12 +154,82 @@ ITEMS_META = {
 }
 
 
+def get_curated_starters() -> Dict[str, dict]:
+    """
+    Returns balanced 3.0 - 3.5 BP starters sampled across all 6 Culantro biomes
+    (excluding weak bugs/Magikarp so players always start with a proper partner).
+    """
+    curated = {}
+    preferred_names = {
+        "Bulbasaur", "Treecko", "Sprigatito", "Shroomish",
+        "Charmander", "Torchic", "Cyndaquil", "Fuecoco",
+        "Squirtle", "Totodile", "Piplup", "Froakie", "Quaxly",
+        "Ralts", "Gible", "Bagon", "Beldum", "Houndour", "Croagunk"
+    }
+    for biome, plist in WILD_POKEDEX_150.items():
+        for pk in plist:
+            if pk["name"] in preferred_names or (pk["bp"] >= 3.0 and pk["name"] not in ("Caterpie", "Magikarp", "Zubat", "Grimer", "Koffing")):
+                entry = json.loads(json.dumps(pk))
+                entry["home_biome"] = biome
+                curated[pk["name"]] = entry
+    return curated
+
+
+CURATED_STARTERS = get_curated_starters()
+
+
+def to_back_sprite(front_sprite: str) -> str:
+    if not front_sprite:
+        return "/assets/pokemon_back/1.png"
+    if "/assets/pokemon/" in front_sprite:
+        return front_sprite.replace("/assets/pokemon/", "/assets/pokemon_back/")
+    return front_sprite
+
+
+def calc_type_multiplier(attacker_type: str, defender_type: str) -> float:
+    chart = TYPE_CHART.get(attacker_type, {})
+    if defender_type in chart.get("strong", []):
+        return 1.35
+    if defender_type in chart.get("weak", []):
+        return 0.80
+    return 1.0
+
+
 class GameState:
     def __init__(self):
         self.players: Dict[str, dict] = {}
+        self.dice_seq = 0
+        self.round_banner_seq = 0
         lib = load_library()
         first_rec = lib.get("classic_culantro") or generate_procedural_map(game_mode="long_mode")
         self.load_from_record(first_rec, preserve_players=False)
+
+    def spawn_initial_poachers(self):
+        wild_nids = [int(k) for k, v in self.nodes.items() if v["type"] == "wild" and int(k) > 0]
+        if len(wild_nids) < 2:
+            wild_nids = [4, 10]
+        self.poachers = [
+            {
+                "id": "grunt_1",
+                "name": "Syndicate Grunt (Lickitung)",
+                "poke_name": "Lickitung",
+                "bp": 6.5,
+                "type": "Normal",
+                "node": wild_nids[0],
+                "sprite": "/assets/poachers/poacher_grunt_m.png",
+                "defeated": False,
+            },
+            {
+                "id": "grunt_2",
+                "name": "Syndicate Grunt (Kangaskhan)",
+                "poke_name": "Kangaskhan",
+                "bp": 7.5,
+                "type": "Normal",
+                "node": wild_nids[-1],
+                "sprite": "/assets/poachers/poacher_grunt_f.png",
+                "defeated": False,
+            },
+        ]
 
     def load_from_record(self, rec: dict, preserve_players: bool = True):
         self.map_id = rec["map_id"]
@@ -137,12 +248,15 @@ class GameState:
         self.warden_defeated = rec.get("warden_defeated", False)
         self.map_shroud = rec.get("map_shroud", "NORMAL")
         self.nodes = json.loads(json.dumps(rec["nodes"]))
+        self.spawn_initial_poachers()
 
         if preserve_players and hasattr(self, "players") and self.players:
             for pl in self.players.values():
                 pl["node"] = 0
                 pl["moves_left"] = 0
                 pl["rolled_this_round"] = False
+                pl["acted_this_round"] = False
+                pl["outpost_looted_this_round"] = False
                 pl["ready_next_round"] = bool(pl.get("is_bot"))
                 pl["ability_used_this_round"] = False
                 for pk in pl.get("team", []):
@@ -154,7 +268,7 @@ class GameState:
         self.chat_log: List[dict] = [
             {
                 "sender": "Professor Mirror",
-                "msg": f"Welcome to {self.map_name}! Enter your Trainer Name at the top right and click 'Join / Edit' to begin.",
+                "msg": f"Welcome to {self.map_name}! Pick your Starter & Role in the top bar and click 'Join / Edit'.",
             }
         ]
         for g_msg in GRUNT_RADIO_INTRO:
@@ -167,8 +281,27 @@ class GameState:
             "result": "READY",
             "player_bp": 10.0,
             "enemy_bp": 10.0,
+            "player_name": "Bulbasaur",
+            "enemy_name": "Meganium",
             "player_sprite": "/assets/pokemon/1.png",
+            "player_back_sprite": "/assets/pokemon_back/1.png",
             "enemy_sprite": "/assets/illumina/illumina_154.png",
+            "player_move": "Solar Blade",
+            "player_anim": "LEAF_STORM",
+            "enemy_move": "Illumina Burst",
+            "type_note": "1.0x Neutral",
+        }
+        self.last_dice = {
+            "seq": self.dice_seq,
+            "player_name": "",
+            "base_roll": 0,
+            "bonus": 0,
+            "total": 0,
+        }
+        self.last_round_banner = {
+            "seq": self.round_banner_seq,
+            "round_num": self.round_num,
+            "subtitle": "Roll your movement die & explore the Culantro Region!",
         }
         self.persist()
 
@@ -230,10 +363,17 @@ class GameState:
         e_spr: str,
         bonus_prob: float = 0.0,
         watermark: str = "Trainer",
+        p_name: str = "Partner",
+        e_name: str = "Opponent",
+        p_type: str = "Normal",
+        e_type: str = "Normal",
+        type_note: str = "",
     ) -> bool:
         win_p = min(0.92, max(0.08, (p_bp / max(1.0, (p_bp + e_bp))) + bonus_prob))
         roll = random.random()
         won = roll <= win_p
+        p_move_meta = SIGNATURE_MOVES.get(p_type, SIGNATURE_MOVES["Normal"])
+        e_move_meta = SIGNATURE_MOVES.get(e_type, SIGNATURE_MOVES["Normal"])
         self.last_wheel = {
             "spin_id": self.last_wheel["spin_id"] + 1,
             "title": title,
@@ -242,13 +382,20 @@ class GameState:
             "result": "VICTORY" if won else "DEFEAT",
             "player_bp": round(p_bp, 1),
             "enemy_bp": round(e_bp, 1),
+            "player_name": p_name,
+            "enemy_name": e_name,
             "player_sprite": p_spr,
+            "player_back_sprite": to_back_sprite(p_spr),
             "enemy_sprite": e_spr,
+            "player_move": p_move_meta["move"],
+            "player_anim": p_move_meta["anim"],
+            "enemy_move": e_move_meta["move"],
+            "type_note": type_note,
         }
         stars = "★★★★ DIAMOND" if won else "★★ SILVER"
         self.snap_photo(
             title,
-            f"Faced {title} ({round(p_bp, 1)} BP vs {round(e_bp, 1)} BP) — {self.last_wheel['result']}",
+            f"{p_name} ({round(p_bp, 1)} BP) vs {e_name} ({round(e_bp, 1)} BP) — {self.last_wheel['result']}",
             stars,
             p_spr,
             e_spr,
@@ -258,35 +405,78 @@ class GameState:
         )
         return won
 
-    def check_amplification_star_trigger(self):
-        if self.amplification_star_active:
-            return
+    def check_amplification_star_trigger(self, force: bool = False):
         illumina_nodes = [nd for nd in self.nodes.values() if nd["type"] == "illumina"]
         calmed_count = sum(1 for nd in illumina_nodes if nd.get("boss", {}).get("calmed"))
         if calmed_count in ILLUMINA_CALM_RADIO_TAUNTS:
             for msg in ILLUMINA_CALM_RADIO_TAUNTS[calmed_count]:
                 if msg not in self.chat_log:
                     self.chat_log.append(dict(msg))
-        if illumina_nodes and calmed_count == len(illumina_nodes):
+        if calmed_count == 3 and not any(g["id"] == "hunter_3" for g in self.poachers):
+            self.poachers.append(
+                {
+                    "id": "hunter_3",
+                    "name": "Syndicate Hunter (Sneasel)",
+                    "poke_name": "Sneasel",
+                    "bp": 9.5,
+                    "type": "Dark",
+                    "node": 10,
+                    "sprite": "/assets/poachers/poacher_hunter_sneasel.png",
+                    "defeated": False,
+                }
+            )
+            self.chat_log.append(
+                {
+                    "sender": "Syndicate Radio",
+                    "msg": "Elite Syndicate Hunter (Sneasel) has been deployed to intercept the Rangers!",
+                }
+            )
+
+        if not self.amplification_star_active and (force or (illumina_nodes and calmed_count == len(illumina_nodes))):
             self.amplification_star_active = True
-            if self.game_mode == "long_mode":
-                deploy_hexagram_wave(self.__dict__, "tier_1")
-                self.chat_log.append(
-                    {
-                        "sender": "Team Syndicate Radio",
-                        "msg": "Captain B.Jack, Lt. Deuce & Chief J.Pot have exited the Fortress to form Triangle Blockade Wave 1!",
-                    }
-                )
-            else:
-                self.chat_log.append(
-                    {
-                        "sender": "Team Syndicate Radio",
-                        "msg": f"{self.commander_name}: All Illumina sanctuaries are calm?! The Fortress gates are open—come face me at Node 17!",
-                    }
-                )
+            deploy_hexagram_wave(self.__dict__, "tier_1")
+            self.round_banner_seq += 1
+            self.last_round_banner = {
+                "seq": self.round_banner_seq,
+                "round_num": self.round_num,
+                "subtitle": "⚠️ SYNDICATE WAVE 1: CAPTAIN B.JACK, LT. DEUCE & CHIEF J.POT DEPLOYED!",
+            }
+            self.chat_log.append(
+                {
+                    "sender": "Team Syndicate Radio",
+                    "msg": "Captain B.Jack (North), Lt. Deuce (West) & Chief J.Pot (East) have exited the Fortress in Triangle Formation!",
+                }
+            )
             self.persist()
 
+    def move_poachers_on_round_end(self):
+        player_nodes = [pl["node"] for pl in self.players.values()]
+        for g in self.poachers:
+            if g.get("defeated"):
+                # Respawn defeated grunt at Fortress after 1 round
+                g["defeated"] = False
+                g["node"] = 13
+                continue
+            curr = self.nodes.get(str(g["node"]))
+            if not curr or not curr.get("edges"):
+                continue
+            edges = [e for e in curr["edges"] if e != 0] or curr["edges"]
+            if player_nodes:
+                p_target = self.nodes[str(player_nodes[0])]
+                next_nid = min(
+                    edges,
+                    key=lambda n: math.hypot(
+                        self.nodes[str(n)]["x"] - p_target["x"],
+                        self.nodes[str(n)]["y"] - p_target["y"],
+                    ),
+                )
+            else:
+                next_nid = random.choice(edges)
+            g["node"] = int(next_nid)
+
     def to_dict(self):
+        illumina_nodes = [nd for nd in self.nodes.values() if nd["type"] == "illumina"]
+        calmed_count = sum(1 for nd in illumina_nodes if nd.get("boss", {}).get("calmed"))
         return {
             "map_id": self.map_id,
             "map_name": self.map_name,
@@ -296,17 +486,23 @@ class GameState:
             "game_over_victory": self.game_over_victory,
             "amplification_star_active": self.amplification_star_active,
             "warden_defeated": self.warden_defeated,
+            "calmed_count": calmed_count,
+            "total_illumina": len(illumina_nodes),
             "map_shroud": self.map_shroud,
             "max_players": self.max_players,
             "round_num": self.round_num,
             "nodes": self.nodes,
             "players": self.players,
+            "poachers": [g for g in self.poachers if not g.get("defeated")],
             "chat_log": self.chat_log[-50:],
             "last_wheel": self.last_wheel,
+            "last_dice": self.last_dice,
+            "last_round_banner": self.last_round_banner,
             "photos": self.photos,
             "library": list(load_library().values()),
             "items_meta": ITEMS_META,
             "roles_meta": ROLES,
+            "starters_catalog": list(CURATED_STARTERS.values()),
         }
 
 
@@ -370,66 +566,31 @@ def execute_boss_battle(state: GameState, pid: str) -> bool:
         return False
     ndata = state.nodes[str(p["node"])]
 
-    # In Long Mode, Node 17 (Fortress) is sealed until all 6 Illumina are calmed and Warden Croupier awakens Mega Darkrai
+    # Check if there is a roaming Syndicate Grunt on this node
+    roaming_grunt = next(
+        (g for g in state.poachers if g["node"] == p["node"] and not g.get("defeated")),
+        None,
+    )
+
     if (
         str(p["node"]) == "17"
         and state.game_mode == "long_mode"
         and not state.warden_defeated
         and not ndata.get("syndicate_boss")
+        and not roaming_grunt
     ):
         state.chat_log.append(
             {
                 "sender": "Fortress Security",
-                "msg": "The Syndicate Citadel blast doors are sealed! Calm all 6 Illumina Sanctuaries and defeat the Syndicate officers surrounding the Fortress first!",
+                "msg": "The Syndicate Citadel blast doors are sealed! Calm the Illumina Sanctuaries or click '⚡ Deploy Star Siege' in the Radar panel to face the Syndicate officers outside!",
             }
         )
         return False
 
-    boss = ndata.get("syndicate_boss") or ndata.get("boss")
+    boss = ndata.get("syndicate_boss") or ndata.get("boss") or roaming_grunt
     if not boss or boss.get("defeated") or boss.get("calmed"):
         state.chat_log.append(
-            {"sender": "System", "msg": f"No active boss to fight at {ndata['name']}!"}
-        )
-        return False
-
-    allies = [al for al in state.players.values() if al["node"] == p["node"]]
-    fighter_present = any(al["role"] == "fighter" for al in allies)
-    photog_present = any(al["role"] == "photographer" for al in allies)
-
-    total_p_bp = 0.0
-    lead_sprite = "/assets/pokemon/1.png"
-    for al in allies:
-        conscious = [pk for pk in al["team"] if not pk.get("fainted")]
-        if conscious:
-            best = max(conscious, key=lambda x: x["bp"])
-            lead_sprite = best["sprite"]
-            contrib = float(best["bp"]) + float(al.get("temp_bp_bonus", 0.0))
-            al["temp_bp_bonus"] = 0.0
-            if fighter_present:
-                contrib += 2.0
-            if "knife" in al["items"]:
-                al["items"].remove("knife")
-                contrib += 4.0
-                state.chat_log.append(
-                    {"sender": "Tactical Item", "msg": f"{al['name']} used Combat Knife (+4.0 BP)!"}
-                )
-            if "grounding_anchor" in al["items"] and boss.get("type") == "Flying":
-                al["items"].remove("grounding_anchor")
-                contrib *= 1.5
-                state.chat_log.append(
-                    {
-                        "sender": "Tactical Item",
-                        "msg": f"{al['name']} deployed Grounding Anchor! Flying boss grounded (1.5x BP)!",
-                    }
-                )
-            total_p_bp += contrib
-
-    if total_p_bp <= 0:
-        state.chat_log.append(
-            {
-                "sender": "Battle",
-                "msg": f"{p['name']}'s team is fainted! Visit an Outpost or use a Fluffruit/Nurse ability first.",
-            }
+            {"sender": "System", "msg": f"No active boss or Syndicate unit to fight at {ndata['name']}!"}
         )
         return False
 
@@ -438,42 +599,113 @@ def execute_boss_battle(state: GameState, pid: str) -> bool:
         team[0]
         if team
         else {
-            "name": boss["name"],
+            "name": boss.get("poke_name", boss["name"]),
             "bp": boss["bp"],
             "type": boss.get("type", "Normal"),
             "sprite": boss["sprite"],
         }
     )
+    target_type = current_target.get("type", boss.get("type", "Normal"))
+
+    allies = [al for al in state.players.values() if al["node"] == p["node"]]
+    fighter_present = any(al["role"] == "fighter" for al in allies)
+    photog_present = any(al["role"] == "photographer" for al in allies)
+
+    total_p_bp = 0.0
+    lead_pk = None
+    type_notes = []
+
+    for al in allies:
+        conscious = [pk for pk in al["team"] if not pk.get("fainted")]
+        if conscious:
+            # First conscious partner is the player's chosen Lead Pokémon!
+            active_lead = conscious[0]
+            if al["id"] == pid or lead_pk is None:
+                lead_pk = active_lead
+
+            mult = calc_type_multiplier(active_lead.get("type", "Normal"), target_type)
+            if mult > 1.0:
+                type_notes.append(f"{active_lead['name']} ({active_lead.get('type')} > {target_type} 1.35x!)")
+            elif mult < 1.0:
+                type_notes.append(f"{active_lead['name']} (0.8x Resisted)")
+
+            # Healthy bench partners contribute +25% support assist BP
+            bench_assist = sum(float(bpk["bp"]) * 0.25 for bpk in conscious[1:])
+            contrib = round((float(active_lead["bp"]) * mult) + bench_assist + float(al.get("temp_bp_bonus", 0.0)), 1)
+            al["temp_bp_bonus"] = 0.0
+
+            if fighter_present:
+                contrib += 2.0
+            if "knife" in al["items"]:
+                al["items"].remove("knife")
+                contrib += 4.0
+                state.chat_log.append(
+                    {"sender": "Tactical Item", "msg": f"{al['name']} used Combat Knife (+4.0 BP)!"}
+                )
+            if "grounding_anchor" in al["items"] and target_type == "Flying":
+                al["items"].remove("grounding_anchor")
+                contrib = round(contrib * 1.5, 1)
+                state.chat_log.append(
+                    {
+                        "sender": "Tactical Item",
+                        "msg": f"{al['name']} deployed Grounding Anchor! Flying target grounded (1.5x BP)!",
+                    }
+                )
+            total_p_bp += contrib
+
+    if total_p_bp <= 0 or not lead_pk:
+        state.chat_log.append(
+            {
+                "sender": "Battle",
+                "msg": f"{p['name']}'s partners are fainted! Visit a blue Outpost node or use a Fluffruit/Nurse ability first.",
+            }
+        )
+        return False
+
+    p["acted_this_round"] = True
     soothed_reduction = float(boss.get("soothed", 0))
     enemy_bp = max(4.0, float(current_target["bp"]) - soothed_reduction)
     bonus_prob = 0.10 if photog_present else 0.0
+    type_summary = ", ".join(type_notes) if type_notes else "1.0x Neutral Matchup"
 
     won = state.record_wheel_spin(
-        f"Vs {current_target['name']}",
+        f"{lead_pk['name']} vs {current_target['name']}",
         total_p_bp,
         enemy_bp,
-        lead_sprite,
+        lead_pk["sprite"],
         current_target["sprite"],
         bonus_prob,
         p["name"],
+        p_name=lead_pk["name"],
+        e_name=current_target["name"],
+        p_type=lead_pk.get("type", "Normal"),
+        e_type=target_type,
+        type_note=type_summary,
     )
 
     if won:
         state.chat_log.append(
-            {"sender": "Battle", "msg": f"VICTORY! {p['name']} overpowered {current_target['name']}!"}
+            {"sender": "Battle", "msg": f"VICTORY! {p['name']}'s {lead_pk['name']} defeated {current_target['name']}!"}
         )
-        if p["team"]:
-            p["team"][0]["exp"] = p["team"][0].get("exp", 0) + 20
-            check_level_up_and_evolution(state, p, p["team"][0])
+        lead_pk["exp"] = lead_pk.get("exp", 0) + 20
+        check_level_up_and_evolution(state, p, lead_pk)
         if len(p["items"]) < 6:
             reward_item = random.choice(list(ITEMS_META.keys()))
             p["items"].append(reward_item)
             state.chat_log.append(
                 {
                     "sender": "Loot",
-                    "msg": f"{p['name']} found a {ITEMS_META[reward_item]['name']}!",
+                    "msg": f"{p['name']} obtained {ITEMS_META[reward_item]['name']}!",
                 }
             )
+
+        if roaming_grunt and boss is roaming_grunt:
+            roaming_grunt["defeated"] = True
+            state.chat_log.append(
+                {"sender": "Syndicate Radio", "msg": f"{roaming_grunt['name']} was driven off from {ndata['name']}!"}
+            )
+            state.persist()
+            return True
 
         if team:
             team.pop(0)
@@ -504,6 +736,12 @@ def execute_boss_battle(state: GameState, pid: str) -> bool:
             if was_syndicate_wave_boss and state.amplification_star_active:
                 next_wave = check_and_advance_syndicate_wave(state.__dict__)
                 if next_wave == "WAVE_2_SPAWNED":
+                    state.round_banner_seq += 1
+                    state.last_round_banner = {
+                        "seq": state.round_banner_seq,
+                        "round_num": state.round_num,
+                        "subtitle": "⚠️ SYNDICATE WAVE 2: MARSHALL ACE & BARON ROULETTE DEPLOYED!",
+                    }
                     state.chat_log.append(
                         {
                             "sender": "Syndicate Radio",
@@ -511,13 +749,25 @@ def execute_boss_battle(state: GameState, pid: str) -> bool:
                         }
                     )
                 elif next_wave == "WAVE_3_SPAWNED":
+                    state.round_banner_seq += 1
+                    state.last_round_banner = {
+                        "seq": state.round_banner_seq,
+                        "round_num": state.round_num,
+                        "subtitle": "⚠️ SYNDICATE WAVE 3: SUPREME WARDEN CROUPIER STEPS OUT!",
+                    }
                     state.chat_log.append(
                         {
                             "sender": "Syndicate Radio",
-                            "msg": "The Enforcers fell! Supreme Warden Croupier has stepped out to the Southern approach!",
+                            "msg": "The Enforcers fell! Supreme Warden Croupier guards the Southern approach!",
                         }
                     )
                 elif next_wave == "DARKRAI_SPAWNED":
+                    state.round_banner_seq += 1
+                    state.last_round_banner = {
+                        "seq": state.round_banner_seq,
+                        "round_num": state.round_num,
+                        "subtitle": "🌑 AMPLIFICATION STAR ALIGNED: SUPER ILLUMINA MEGA DARKRAI AWAKENS!",
+                    }
                     state.chat_log.append(
                         {
                             "sender": "CRITICAL ALERT",
@@ -537,6 +787,7 @@ def execute_boss_battle(state: GameState, pid: str) -> bool:
                     }
                 )
     else:
+        # Fair KO rule: Only the active Lead Pokémon on each participating Ranger faints!
         for al in allies:
             if "decoy" in al["items"]:
                 al["items"].remove("decoy")
@@ -547,23 +798,33 @@ def execute_boss_battle(state: GameState, pid: str) -> bool:
                     }
                 )
             else:
-                for pk in al["team"]:
-                    pk["fainted"] = True
-                state.chat_log.append(
-                    {
-                        "sender": "Battle",
-                        "msg": f"{current_target['name']} knocked out {al['name']}'s squad! Heal at an Outpost or use a Fluffruit.",
-                    }
-                )
+                conscious_list = [pk for pk in al["team"] if not pk.get("fainted")]
+                if conscious_list:
+                    ko_lead = conscious_list[0]
+                    ko_lead["fainted"] = True
+                    # Auto-rotate next healthy partner to index 0 if available
+                    healthy_Idx = next((i for i, pk in enumerate(al["team"]) if not pk.get("fainted")), None)
+                    if healthy_Idx is not None and healthy_Idx > 0:
+                        next_up = al["team"].pop(healthy_Idx)
+                        al["team"].insert(0, next_up)
+                        state.chat_log.append(
+                            {
+                                "sender": "Battle",
+                                "msg": f"{al['name']}'s {ko_lead['name']} fainted! {next_up['name']} stepped up as new Lead!",
+                            }
+                        )
+                    else:
+                        state.chat_log.append(
+                            {
+                                "sender": "Battle",
+                                "msg": f"{al['name']}'s {ko_lead['name']} fainted! Heal at a blue Outpost or use a Fluffruit.",
+                            }
+                        )
     state.persist()
     return won
 
 
 def process_ai_bot_turns(state: GameState):
-    """
-    Mathematical heuristic bot engine: rolls dice, navigates toward the nearest active
-    Illumina or Syndicate Boss node, partners/trains on wild nodes, and engages bosses.
-    """
     for pid, p in list(state.players.items()):
         if not p.get("is_bot"):
             continue
@@ -697,6 +958,15 @@ async def handle_websocket_actions(ws: WebSocket, data: dict, state: GameState):
         delete_map_record(data.get("map_id"))
         state.chat_log.append({"sender": "System", "msg": "Deleted map session from library."})
 
+    elif action == "FORCE_STAR_SIEGE":
+        if not check_verify_join_code(data.get("join_code")):
+            await ws.send_text(json.dumps({"type": "ERROR", "msg": "Incorrect Host Join Code!"}))
+            return
+        for nd in state.nodes.values():
+            if nd["type"] == "illumina" and nd.get("boss"):
+                nd["boss"]["calmed"] = True
+        state.check_amplification_star_trigger(force=True)
+
     elif action == "JOIN_OR_EDIT":
         if not check_verify_join_code(data.get("join_code")):
             await ws.send_text(
@@ -707,10 +977,15 @@ async def handle_websocket_actions(ws: WebSocket, data: dict, state: GameState):
         role_key = data.get("role", "runner")
         if role_key not in ROLES:
             role_key = "runner"
+        starter_choice = data.get("starter", "RANDOM")
+
+        if starter_choice in CURATED_STARTERS:
+            starter = json.loads(json.dumps(CURATED_STARTERS[starter_choice]))
+        else:
+            starter = json.loads(json.dumps(random.choice(list(CURATED_STARTERS.values()))))
+        starter.update({"level": 1, "exp": 0, "fainted": False})
 
         if pid not in state.players:
-            starter = json.loads(json.dumps(random.choice(WILD_POKEDEX_150["Florio"][:4])))
-            starter.update({"level": 1, "exp": 0, "fainted": False})
             state.players[pid] = {
                 "id": pid,
                 "name": trainer_name,
@@ -719,6 +994,8 @@ async def handle_websocket_actions(ws: WebSocket, data: dict, state: GameState):
                 "node": 0,
                 "moves_left": 0,
                 "rolled_this_round": False,
+                "acted_this_round": False,
+                "outpost_looted_this_round": False,
                 "ready_next_round": False,
                 "ability_used_this_round": False,
                 "temp_bp_bonus": 0.0,
@@ -728,12 +1005,14 @@ async def handle_websocket_actions(ws: WebSocket, data: dict, state: GameState):
             state.chat_log.append(
                 {
                     "sender": "System",
-                    "msg": f"Trainer {trainer_name} ({ROLES[role_key]['name']}) arrived at Base Camp with {starter['name']}!",
+                    "msg": f"Ranger {trainer_name} ({ROLES[role_key]['name']}) arrived at Base Camp with partner {starter['name']} ({starter['type']})!",
                 }
             )
         else:
             state.players[pid]["name"] = trainer_name
             state.players[pid]["role"] = role_key
+            if starter_choice in CURATED_STARTERS and len(state.players[pid]["team"]) == 1 and state.players[pid]["team"][0].get("level", 1) == 1:
+                state.players[pid]["team"][0] = starter
             state.chat_log.append(
                 {
                     "sender": "System",
@@ -741,6 +1020,20 @@ async def handle_websocket_actions(ws: WebSocket, data: dict, state: GameState):
                 }
             )
         state.persist()
+
+    elif action == "SELECT_LEAD":
+        p = state.players.get(pid)
+        idx = int(data.get("index", -1))
+        if p and 0 < idx < len(p["team"]):
+            chosen = p["team"].pop(idx)
+            p["team"].insert(0, chosen)
+            state.chat_log.append(
+                {
+                    "sender": p["name"],
+                    "msg": f"★ Switched Lead Partner to {chosen['name']} ({chosen.get('type', 'Normal')} Type, BP {chosen['bp']})!",
+                }
+            )
+            state.persist()
 
     elif action == "ADD_BOT":
         if len(state.players) >= state.max_players:
@@ -752,7 +1045,7 @@ async def handle_websocket_actions(ws: WebSocket, data: dict, state: GameState):
         bot_id = f"bot_{int(time.time()*1000) % 100000}_{bot_num}"
         bot_role = random.choice(list(ROLES.keys()))
         bot_name = f"Bot Ranger #{bot_num}"
-        starter = json.loads(json.dumps(random.choice(WILD_POKEDEX_150["Florio"])))
+        starter = json.loads(json.dumps(random.choice(list(CURATED_STARTERS.values()))))
         starter.update({"level": 1, "exp": 0, "fainted": False})
         state.players[bot_id] = {
             "id": bot_id,
@@ -762,6 +1055,8 @@ async def handle_websocket_actions(ws: WebSocket, data: dict, state: GameState):
             "node": 0,
             "moves_left": 0,
             "rolled_this_round": False,
+            "acted_this_round": False,
+            "outpost_looted_this_round": False,
             "ready_next_round": True,
             "ability_used_this_round": False,
             "temp_bp_bonus": 0.0,
@@ -811,6 +1106,14 @@ async def handle_websocket_actions(ws: WebSocket, data: dict, state: GameState):
         bonus = 2 if p["role"] == "runner" else 0
         p["moves_left"] = base + bonus
         p["rolled_this_round"] = True
+        state.dice_seq += 1
+        state.last_dice = {
+            "seq": state.dice_seq,
+            "player_name": p["name"],
+            "base_roll": base,
+            "bonus": bonus,
+            "total": p["moves_left"],
+        }
         state.chat_log.append(
             {
                 "sender": p["name"],
@@ -851,18 +1154,24 @@ async def handle_websocket_actions(ws: WebSocket, data: dict, state: GameState):
             if ndata["type"] == "outpost":
                 for pk in p["team"]:
                     pk["fainted"] = False
-                if len(p["items"]) < 6:
-                    ikey = random.choice(list(ITEMS_META.keys()))
-                    p["items"].append(ikey)
-                    state.chat_log.append(
-                        {
-                            "sender": p["name"],
-                            "msg": f"🏥 Healed squad at {ndata['name']} & picked up {ITEMS_META[ikey]['name']}!",
-                        }
-                    )
+                if not p.get("outpost_looted_this_round"):
+                    p["outpost_looted_this_round"] = True
+                    if len(p["items"]) < 6:
+                        ikey = random.choice(list(ITEMS_META.keys()))
+                        p["items"].append(ikey)
+                        state.chat_log.append(
+                            {
+                                "sender": p["name"],
+                                "msg": f"🏥 Healed squad at {ndata['name']} & picked up {ITEMS_META[ikey]['name']} (1 Outpost resupply per round)!",
+                            }
+                        )
+                    else:
+                        state.chat_log.append(
+                            {"sender": p["name"], "msg": f"🏥 Healed squad at {ndata['name']}! (Backpack full)"}
+                        )
                 else:
                     state.chat_log.append(
-                        {"sender": p["name"], "msg": f"🏥 Healed squad at {ndata['name']}! (Backpack full)"}
+                        {"sender": p["name"], "msg": f"🏥 Healed squad at {ndata['name']}! (Already looted an Outpost this round)"}
                     )
             state.persist()
         else:
@@ -880,13 +1189,23 @@ async def handle_websocket_actions(ws: WebSocket, data: dict, state: GameState):
         if not p:
             await ws.send_text(json.dumps({"type": "ERROR", "msg": "Join the game first!"}))
             return
+        if p.get("acted_this_round"):
+            await ws.send_text(
+                json.dumps(
+                    {
+                        "type": "ERROR",
+                        "msg": "You already used your 1 Wild/Combat Action this turn! Click 'Lock Turn / Next Round' when finished moving.",
+                    }
+                )
+            )
+            return
         ndata = state.nodes[str(p["node"])]
         if ndata["type"] != "wild":
             await ws.send_text(
                 json.dumps(
                     {
                         "type": "ERROR",
-                        "msg": f"You are at {ndata['name']} ({ndata['type'].upper()}). Move to a purple WILD node to partner or spar with wild Pokémon!",
+                        "msg": f"You are at {ndata['name']} ({ndata['type'].upper()}). Move to a GREEN Wild node to partner or battle wild Pokémon!",
                     }
                 )
             )
@@ -894,17 +1213,25 @@ async def handle_websocket_actions(ws: WebSocket, data: dict, state: GameState):
         w = random.choice(WILD_POKEDEX_150.get(ndata["region"], WILD_POKEDEX_150["Florio"]))
         choice = data.get("mode", "catch")
         active_pk = p["team"][0]
+        mult = calc_type_multiplier(active_pk.get("type", "Normal"), w.get("type", "Normal"))
+        type_str = f"Type Advantage 1.35x!" if mult > 1.0 else ("Resisted 0.8x" if mult < 1.0 else "1.0x Neutral")
 
         if choice == "catch":
             if len(p["team"]) < 3:
+                p["acted_this_round"] = True
                 state.record_wheel_spin(
-                    f"Partner Encounter: {w['name']}",
-                    float(active_pk["bp"]) + 3.0,
+                    f"Ranger Capture: {w['name']}",
+                    round(float(active_pk["bp"]) * mult + 2.5, 1),
                     float(w["bp"]),
                     active_pk["sprite"],
                     w["sprite"],
                     0.20,
                     p["name"],
+                    p_name=active_pk["name"],
+                    e_name=w["name"],
+                    p_type=active_pk.get("type", "Normal"),
+                    e_type=w.get("type", "Normal"),
+                    type_note=type_str,
                 )
                 new_pk = json.loads(json.dumps(w))
                 new_pk.update({"level": 1, "exp": 0, "fainted": False})
@@ -912,7 +1239,7 @@ async def handle_websocket_actions(ws: WebSocket, data: dict, state: GameState):
                 state.chat_log.append(
                     {
                         "sender": p["name"],
-                        "msg": f"🔴 Ranger Styler locked on! Partnered up with wild {w['name']} (BP {w['bp']})!",
+                        "msg": f"🔴 Partnered up with wild {w['name']} ({w['type']}, BP {w['bp']})! (1 Action used this turn)",
                     }
                 )
             else:
@@ -925,32 +1252,38 @@ async def handle_websocket_actions(ws: WebSocket, data: dict, state: GameState):
                     )
                 )
         elif choice == "battle":
+            p["acted_this_round"] = True
             won = state.record_wheel_spin(
                 f"Wild Spar vs {w['name']}",
-                float(active_pk["bp"]) + 1.5,
+                round(float(active_pk["bp"]) * mult + 1.0, 1),
                 float(w["bp"]),
                 active_pk["sprite"],
                 w["sprite"],
                 0.15,
                 p["name"],
+                p_name=active_pk["name"],
+                e_name=w["name"],
+                p_type=active_pk.get("type", "Normal"),
+                e_type=w.get("type", "Normal"),
+                type_note=type_str,
             )
             base_exp = {
-                "Erratic": 30,
-                "Fast": 25,
-                "Medium Fast": 20,
-                "Medium Slow": 18,
-                "Slow": 15,
-                "Fluctuating": 25,
-            }.get(w.get("exp_group"), 20)
+                "Erratic": 25,
+                "Fast": 22,
+                "Medium Fast": 18,
+                "Medium Slow": 16,
+                "Slow": 14,
+                "Fluctuating": 22,
+            }.get(w.get("exp_group"), 18)
             if not won:
-                base_exp = max(10, base_exp // 2)
+                base_exp = max(8, base_exp // 2)
             if p["role"] == "researcher":
-                base_exp *= 2
+                base_exp = int(base_exp * 1.5)
             active_pk["exp"] = active_pk.get("exp", 0) + base_exp
             state.chat_log.append(
                 {
                     "sender": p["name"],
-                    "msg": f"⚔️ {active_pk['name']} sparred with wild {w['name']} (+{base_exp} EXP)!",
+                    "msg": f"⚔️ {active_pk['name']} battled wild {w['name']} (+{base_exp} EXP)! (1 Action used this turn)",
                 }
             )
             check_level_up_and_evolution(state, p, active_pk)
@@ -1123,14 +1456,25 @@ async def handle_websocket_actions(ws: WebSocket, data: dict, state: GameState):
             state.chat_log.append(
                 {
                     "sender": p["name"],
-                    "msg": "🪆 Decoy Doll is active in your bag—it will automatically protect your squad if a battle spin fails!",
+                    "msg": "🪆 Decoy Doll is active in your bag—it will automatically protect your Lead if a battle spin fails!",
                 }
             )
         state.persist()
 
     elif action == "FIGHT_BOSS":
-        if not pid or pid not in state.players:
+        p = state.players.get(pid)
+        if not p:
             await ws.send_text(json.dumps({"type": "ERROR", "msg": "Join the game first!"}))
+            return
+        if p.get("acted_this_round"):
+            await ws.send_text(
+                json.dumps(
+                    {
+                        "type": "ERROR",
+                        "msg": "You already used your 1 Combat/Node Action this turn! Lock Turn to advance to the next round.",
+                    }
+                )
+            )
             return
         execute_boss_battle(state, pid)
 
@@ -1147,16 +1491,25 @@ async def handle_websocket_actions(ws: WebSocket, data: dict, state: GameState):
         human_players = [pl for pl in state.players.values() if not pl.get("is_bot")]
         if human_players and all(pl.get("ready_next_round") for pl in human_players):
             process_ai_bot_turns(state)
+            state.move_poachers_on_round_end()
             state.round_num += 1
             for pl in state.players.values():
                 pl["rolled_this_round"] = False
+                pl["acted_this_round"] = False
+                pl["outpost_looted_this_round"] = False
                 pl["ready_next_round"] = bool(pl.get("is_bot"))
                 pl["ability_used_this_round"] = False
                 pl["moves_left"] = 0
+            state.round_banner_seq += 1
+            state.last_round_banner = {
+                "seq": state.round_banner_seq,
+                "round_num": state.round_num,
+                "subtitle": "All Rangers locked in! Syndicate patrols moved — roll your dice!",
+            }
             state.chat_log.append(
                 {
                     "sender": "Round Manager",
-                    "msg": f"=== ROUND {state.round_num} STARTED! Roll your movement dice! ===",
+                    "msg": f"=== ROUND {state.round_num} STARTED! Syndicate patrols advanced. Roll your movement dice! ===",
                 }
             )
         state.persist()
@@ -1195,5 +1548,5 @@ async def index():
 if __name__ == "__main__":
     import uvicorn
 
-    print("Starting Culantro Region Server v2.2 on http://0.0.0.0:8080 ...")
+    print("Starting Culantro Region Server v3.0 on http://0.0.0.0:8080 ...")
     uvicorn.run(app, host="0.0.0.0", port=8080)
