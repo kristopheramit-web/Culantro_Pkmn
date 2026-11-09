@@ -3,80 +3,254 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Culantro Region Pokémon Board Game - drft.stream</title>
 <style>
   :root {
-    --glass-bg: rgba(19, 28, 39, 0.78);
-    --glass-border: rgba(255, 255, 255, 0.12);
+    --glass-bg: rgba(19, 28, 39, 0.84);
+    --glass-border: rgba(255, 255, 255, 0.14);
     --accent-blue: #388bfd;
     --accent-green: #238636;
     --accent-red: #da3633;
     --accent-gold: #b8860b;
+    --accent-purple: #6e40c9;
   }
+  * { box-sizing: border-box; }
   body {
-    margin: 0; font-family: 'Segoe UI', system-ui, sans-serif;
-    background: radial-gradient(circle at 50% 20%, #1b2a47, #0a0f16 75%);
-    color: #e6edf3; min-height: 100vh;
+    margin: 0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: radial-gradient(circle at 50% 20%, #1b2a47, #0a0f16 78%);
+    color: #e6edf3;
+    min-height: 100vh;
   }
   header {
-    background: var(--glass-bg); backdrop-filter: blur(12px);
-    padding: 10px 20px; display: flex; justify-content: space-between; align-items: center;
-    border-bottom: 1px solid var(--glass-border); flex-wrap: wrap; gap: 10px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    padding: 10px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--glass-border);
+    flex-wrap: wrap;
+    gap: 10px;
   }
-  .badge { background: rgba(56, 139, 253, 0.25); border: 1px solid var(--accent-blue); padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 12px; margin-left: 6px; }
-  .main-grid { display: grid; grid-template-columns: 310px 1fr 340px; gap: 12px; padding: 12px; max-width: 1720px; margin: 0 auto; }
+  .badge {
+    background: rgba(56, 139, 253, 0.22);
+    border: 1px solid var(--accent-blue);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 12px;
+    margin-left: 4px;
+    display: inline-block;
+  }
+  .main-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr 350px;
+    gap: 12px;
+    padding: 12px;
+    max-width: 1760px;
+    margin: 0 auto;
+  }
+  @media (max-width: 1200px) {
+    .main-grid { grid-template-columns: 1fr; }
+  }
   .panel {
-    background: var(--glass-bg); backdrop-filter: blur(12px);
-    border: 1px solid var(--glass-border); border-radius: 12px; padding: 14px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4); display: flex; flex-direction: column; gap: 10px; position: relative;
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
   }
-  #boardCanvas { background: radial-gradient(circle at 50% 45%, #16425b, #071722 85%); border-radius: 10px; width: 100%; height: 610px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; }
-  #wheelCanvas { background: rgba(11, 17, 24, 0.85); border-radius: 10px; border: 1px solid var(--glass-border); align-self: center; }
+  #boardCanvas {
+    background: radial-gradient(circle at 50% 45%, #16425b, #071722 88%);
+    border-radius: 10px;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 980 / 610;
+    border: 1px solid rgba(255,255,255,0.22);
+    cursor: pointer;
+    display: block;
+  }
+  #wheelCanvas {
+    background: rgba(11, 17, 24, 0.88);
+    border-radius: 10px;
+    border: 1px solid var(--glass-border);
+    align-self: center;
+  }
   input, select, button {
-    background: rgba(11, 17, 24, 0.85); color: #fff; border: 1px solid var(--glass-border);
-    padding: 7px 10px; border-radius: 6px; font-size: 12.5px; backdrop-filter: blur(6px);
+    background: rgba(11, 17, 24, 0.9);
+    color: #fff;
+    border: 1px solid var(--glass-border);
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 12.5px;
   }
-  button { background: var(--accent-green); border-color: #2ea043; cursor: pointer; font-weight: 600; transition: transform 0.08s, filter 0.1s; }
+  button {
+    background: var(--accent-green);
+    border-color: #2ea043;
+    cursor: pointer;
+    font-weight: 600;
+    transition: transform 0.08s, filter 0.12s;
+  }
   button:hover { filter: brightness(1.15); }
   button:active { transform: scale(0.97); }
   button.secondary { background: var(--accent-blue); border-color: #58a6ff; }
   button.warn { background: var(--accent-red); border-color: #f85149; }
   button.gold { background: var(--accent-gold); border-color: #ffd166; color: #fff; }
-  .chat-box { height: 175px; overflow-y: auto; background: rgba(8, 12, 17, 0.85); padding: 8px; border-radius: 6px; font-size: 12px; border: 1px solid var(--glass-border); }
-  .player-card { background: rgba(11, 17, 24, 0.65); border: 1px solid var(--glass-border); padding: 8px; border-radius: 8px; font-size: 12px; }
-  .sprite-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
-  .mini-sprite { width: 34px; height: 34px; image-rendering: pixelated; background: rgba(22, 34, 48, 0.8); border-radius: 6px; border: 1px solid var(--glass-border); }
-  
-  /* Universal Hover Tooltip */
-  #tooltipBox {
-    position: absolute; display: none; background: rgba(13, 19, 26, 0.95); border: 1px solid var(--accent-blue);
-    padding: 8px 12px; border-radius: 6px; font-size: 11.5px; z-index: 1000; pointer-events: none; max-width: 240px; box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+  button.purple { background: var(--accent-purple); border-color: #a371f7; }
+  .chat-box {
+    height: 170px;
+    overflow-y: auto;
+    background: rgba(8, 12, 17, 0.88);
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    border: 1px solid var(--glass-border);
+    line-height: 1.45;
   }
-
-  /* Modals */
-  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; z-index: 999; padding: 20px; }
-  .modal-box { background: #131c27; border: 2px solid var(--accent-blue); border-radius: 14px; max-width: 960px; width: 100%; max-height: 88vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 16px 48px rgba(0,0,0,0.7); }
-  .polaroid-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
-  .polaroid { background: #f8f9fa; color: #1b1f23; border-radius: 8px; padding: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 6px; position: relative; }
-  .polaroid-stage { background: linear-gradient(135deg, #16425b, #0b132b); height: 105px; border-radius: 6px; display: flex; justify-content: space-around; align-items: center; }
+  .player-card {
+    background: rgba(11, 17, 24, 0.72);
+    border: 1px solid var(--glass-border);
+    padding: 9px;
+    border-radius: 8px;
+    font-size: 12px;
+  }
+  .player-card.active-me {
+    border-color: #3fb950;
+    box-shadow: 0 0 12px rgba(63, 185, 80, 0.25);
+  }
+  .sprite-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+  .mini-sprite {
+    width: 34px;
+    height: 34px;
+    image-rendering: pixelated;
+    background: rgba(22, 34, 48, 0.85);
+    border-radius: 6px;
+    border: 1px solid var(--glass-border);
+  }
+  .bag-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+    gap: 6px;
+  }
+  .bag-item-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(22, 34, 48, 0.9);
+    border: 1px solid #58a6ff;
+    padding: 5px 8px;
+    border-radius: 7px;
+    text-align: left;
+    font-size: 11.5px;
+    color: #e6edf3;
+  }
+  .bag-item-btn img {
+    width: 26px;
+    height: 26px;
+    image-rendering: pixelated;
+    flex-shrink: 0;
+  }
+  #tooltipBox {
+    position: fixed;
+    display: none;
+    background: rgba(13, 19, 26, 0.96);
+    border: 1px solid var(--accent-blue);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    z-index: 2000;
+    pointer-events: none;
+    max-width: 260px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.65);
+  }
+  #toastBanner {
+    position: fixed;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(218, 54, 51, 0.95);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    display: none;
+    z-index: 3000;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+  }
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.84);
+    backdrop-filter: blur(8px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1500;
+    padding: 18px;
+  }
+  .modal-box {
+    background: #131c27;
+    border: 2px solid var(--accent-blue);
+    border-radius: 14px;
+    max-width: 960px;
+    width: 100%;
+    max-height: 88vh;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.75);
+  }
+  .polaroid-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+  .polaroid {
+    background: #f8f9fa;
+    color: #1b1f23;
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+  }
+  .polaroid-stage {
+    background: linear-gradient(135deg, #16425b, #0b132b);
+    height: 105px;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+  }
   .polaroid-stage img { width: 64px; height: 64px; image-rendering: pixelated; }
-  .watermark { position: absolute; bottom: 8px; right: 10px; font-size: 10px; color: #888; font-style: italic; }
+  .watermark { position: absolute; bottom: 8px; right: 10px; font-size: 10px; color: #666; font-style: italic; }
 </style>
 </head>
 <body>
 <div id="tooltipBox"></div>
+<div id="toastBanner"></div>
+
 <header>
-  <div>
-    <strong id="mapTitleHeader">CULANTRO REGION</strong>
+  <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
+    <strong id="mapTitleHeader" style="font-size:15px;">CULANTRO REGION</strong>
+    <span class="badge" id="wsStatusBadge" style="background:#238636; border-color:#3fb950;">🟢 CONNECTING</span>
     <span class="badge" id="roundBadge">Round 1</span>
     <span class="badge" id="modeBadge">SPECTATOR MODE</span>
-    <button class="secondary" onclick="openLibraryModal()" style="margin-left:8px;" title="Browse procedural maps & sessions">🗺️ Map Library</button>
-    <button class="gold" onclick="openAlbumModal()" style="margin-left:4px;" title="View Highlights B-Roll photo album">📸 Highlights B-Roll (<span id="photoCount">0</span>)</button>
+    <button class="secondary" onclick="openLibraryModal()" style="margin-left:6px;">🗺️ Map Library</button>
+    <button class="gold" onclick="openAlbumModal()" style="margin-left:4px;">📸 Highlights B-Roll (<span id="photoCount">0</span>)</button>
   </div>
   <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-    <input type="password" id="joinCode" placeholder="Host Join Code..." style="width:115px;" title="Enter host join code (CULANTRO2026)">
-    <input type="text" id="playerName" placeholder="Trainer Name" style="width:100px;">
-    <select id="playerRole" title="Choose your Ranger partner role">
+    <input type="text" id="joinCode" value="CULANTRO2026" placeholder="Host Join Code..." style="width:120px;" title="Host Join Code (Default: CULANTRO2026)">
+    <input type="text" id="playerName" placeholder="Trainer Name..." style="width:125px;">
+    <select id="playerRole" title="Choose your Ranger Role">
       <option value="runner">Runner (+2 Move)</option>
       <option value="musician">Musician (-5 Boss BP)</option>
       <option value="nurse">Nurse (Node Heal)</option>
@@ -84,40 +258,56 @@
       <option value="researcher">Researcher (2x XP)</option>
       <option value="photographer">Photographer (+10% Odds)</option>
     </select>
-    <button onclick="joinGame()">Join / Edit</button>
+    <button onclick="joinGame()">✅ Join / Edit</button>
   </div>
 </header>
 
 <div class="main-grid">
+  <!-- LEFT PANEL: TRAINERS, BOTS & SYNDICATE RADAR -->
   <div class="panel">
-    <h3 style="margin:0; font-size:15px;">Culantro Trainers (2-6)</h3>
-    <div id="playersList" style="display:flex; flex-direction:column; gap:8px; overflow-y:auto; max-height:400px;"></div>
-    <h3 style="margin:4px 0 0 0; font-size:15px;">Team Syndicate Radar</h3>
-    <div id="poachersList" style="display:flex; flex-direction:column; gap:6px;"></div>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="margin:0; font-size:14.5px;">Culantro Rangers (<span id="playerCountLabel">0</span>/6)</h3>
+      <div style="display:flex; gap:4px;">
+        <button class="purple" onclick="sendAction({action:'ADD_BOT'})" style="padding:4px 8px; font-size:11.5px;" title="Add a mathematical bot Ranger">🤖 + Bot</button>
+        <button class="warn" onclick="sendAction({action:'REMOVE_BOT'})" style="padding:4px 7px; font-size:11.5px;" title="Remove last bot">− Bot</button>
+      </div>
+    </div>
+    <div id="playersList" style="display:flex; flex-direction:column; gap:8px; overflow-y:auto; max-height:360px;"></div>
+
+    <h3 style="margin:6px 0 0 0; font-size:14.5px;">Team Syndicate Radar</h3>
+    <div id="poachersList" style="display:flex; flex-direction:column; gap:6px; overflow-y:auto; max-height:210px;"></div>
   </div>
 
-  <div class="panel" style="padding:8px;">
+  <!-- CENTER PANEL: INTERACTIVE BOARD CANVAS & TURN CONTROLS -->
+  <div class="panel" style="padding:10px;">
     <canvas id="boardCanvas" width="980" height="610"></canvas>
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
       <div style="display:flex; gap:6px; flex-wrap:wrap;">
-        <button onclick="sendAction({action:'ROLL_DICE'})" title="Roll 1-6 movement die">🎲 Roll Dice</button>
-        <button class="secondary" onclick="sendAction({action:'WILD_ENCOUNTER_ACTION', mode:'catch'})" title="Partner with wild Pokémon (Max 3)">🔴 Partner Up</button>
-        <button class="secondary" onclick="sendAction({action:'WILD_ENCOUNTER_ACTION', mode:'battle'})" title="Battle wild Pokémon for EXP & Level-Up Evolution">⚔️ Battle for EXP</button>
-        <button class="warn" onclick="sendAction({action:'FIGHT_BOSS'})" title="Challenge Syndicate Boss or Illumina target">🔥 Fight Boss / Gauntlet!</button>
+        <button onclick="sendAction({action:'ROLL_DICE'})">🎲 1. Roll Dice</button>
+        <button class="secondary" onclick="sendAction({action:'WILD_ENCOUNTER_ACTION', mode:'catch'})">🔴 Partner Up (Wild)</button>
+        <button class="secondary" onclick="sendAction({action:'WILD_ENCOUNTER_ACTION', mode:'battle'})">⚔️ Battle for EXP</button>
+        <button class="warn" onclick="sendAction({action:'FIGHT_BOSS'})">🔥 Fight Boss / Sanctuary!</button>
       </div>
-      <button onclick="sendAction({action:'READY_NEXT_ROUND'})" title="Lock your turn for this round">✅ Lock Turn</button>
+      <button class="gold" onclick="sendAction({action:'READY_NEXT_ROUND'})">⏭️ Lock Turn / Next Round</button>
     </div>
   </div>
 
+  <!-- RIGHT PANEL: WHEEL, DYNAMIC PLAYER BACKPACK & RADIO CHAT -->
   <div class="panel">
-    <h3 style="margin:0; font-size:15px; text-align:center;">Syndicate Battle Wheel</h3>
-    <canvas id="wheelCanvas" width="280" height="230"></canvas>
+    <h3 style="margin:0; font-size:14.5px; text-align:center;">Syndicate Battle Wheel</h3>
+    <canvas id="wheelCanvas" width="270" height="205"></canvas>
     <div id="wheelStatus" class="player-card" style="text-align:center;">Waiting for battle spin...</div>
-    <div style="display:flex; gap:4px; flex-wrap:wrap; justify-content:center;">
-      <button class="secondary" onclick="sendAction({action:'USE_ABILITY_OR_ITEM', kind:'grounding_anchor'})" title="Grounds Flying types, making Fighting super effective">⚓ Grounding Anchor</button>
-      <button class="secondary" onclick="sendAction({action:'USE_ABILITY_OR_ITEM', kind:'soothe_bell'})" title="Soothe Illumina target">🔔 Soothe Bell</button>
-      <button class="secondary" onclick="sendAction({action:'USE_ABILITY_OR_ITEM', kind:'rare_candy'})" title="Boost active partner">🍬 Rare Candy</button>
+
+    <!-- PLAYER-SPECIFIC BACKPACK & ROLE ABILITY -->
+    <div class="player-card" style="display:flex; flex-direction:column; gap:6px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <strong style="color:#ffd166; font-size:13px;">🎒 Your Ranger Backpack</strong>
+        <span id="bagCountLabel" style="font-size:11px; color:#8b949e;">0/6 Items</span>
+      </div>
+      <div id="roleAbilityContainer"></div>
+      <div id="playerBagContainer" class="bag-grid"></div>
     </div>
+
     <h3 style="margin:2px 0 0 0; font-size:14px;">Team Radio & Co-op Log</h3>
     <div class="chat-box" id="chatBox"></div>
     <div style="display:flex; gap:6px;">
@@ -127,37 +317,39 @@
   </div>
 </div>
 
+<!-- MAP LIBRARY MODAL -->
 <div class="modal-backdrop" id="libraryModal">
   <div class="modal-box">
     <div style="display:flex; justify-content:space-between; align-items:center;">
-      <h2 style="margin:0;">🗺️ Procedural Culantro Region Generator & Session Library</h2>
+      <h2 style="margin:0; font-size:18px;">🗺️ Procedural Culantro Region Generator & Session Library</h2>
       <button class="warn" onclick="closeLibraryModal()">Close ✕</button>
     </div>
     <div class="player-card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding:12px;">
       <div>
-        <strong style="font-size:14px;">Generate Land-Dominant Archipelago (<20% Water)</strong>
-        <div style="color:#8b949e;">Guarantees 6 encircling nodes around the Team Syndicate fortress for the Amplification Star trigger.</div>
+        <strong style="font-size:14px;">Generate Land-Dominant Archipelago (&lt;20% Water)</strong>
+        <div style="color:#8b949e;">Guarantees 6 encircling nodes around the Team Syndicate Fortress for the Amplification Star trigger.</div>
       </div>
       <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
-        <input type="text" id="customSeedInput" placeholder="Region Name / Seed...">
+        <input type="text" id="customSeedInput" placeholder="Custom Region Name / Seed...">
         <select id="gameModeSelect">
-          <option value="long_mode" selected>Long Game Mode (Amplification Star + Mega Darkrai)</option>
+          <option value="long_mode" selected>Long Mode (Amplification Star + Mega Darkrai)</option>
           <option value="standard">Standard Mode</option>
         </select>
-        <button onclick="generateNewProceduralMap()">✨ Generate Map</button>
-        <button class="secondary" onclick="loadMapFromLibrary('classic_culantro_fresh')">🔄 Reset Classic</button>
+        <button onclick="generateNewProceduralMap()">✨ Generate New Map</button>
+        <button class="secondary" onclick="loadMapFromLibrary('classic_culantro_fresh')">🔄 Reset Classic Map</button>
       </div>
     </div>
-    <h3 style="margin:0;">Saved Map Library</h3>
+    <h3 style="margin:0; font-size:15px;">Saved Map Sessions</h3>
     <div id="libraryList" style="display:flex; flex-direction:column; gap:8px;"></div>
   </div>
 </div>
 
+<!-- HIGHLIGHTS B-ROLL MODAL -->
 <div class="modal-backdrop" id="albumModal">
   <div class="modal-box">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
       <div>
-        <h2 style="margin:0;">📸 Highlights B-Roll Photo Album</h2>
+        <h2 style="margin:0; font-size:18px;">📸 Highlights B-Roll Photo Album</h2>
         <div style="font-size:12.5px; color:#8b949e;" id="albumSubtitle">Capturing your journey across the Culantro Region!</div>
       </div>
       <div style="display:flex; gap:8px;">
@@ -170,83 +362,160 @@
 </div>
 
 <script>
-const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-const ws = new WebSocket(wsProto + '//' + location.host + '/ws');
 let myPlayerId = localStorage.getItem('culantro_pid') || ('p_' + Math.random().toString(36).substring(2, 8));
 localStorage.setItem('culantro_pid', myPlayerId);
+
 let gameState = null;
-let hasShownModal = false;
+let ws = null;
 let hasAutoOpenedVictory = false;
+let lastSeenSpinId = 0;
+let wheelAnim = { active: false, startTime: 0, duration: 3200, startAngle: 0, targetAngle: 0, currentAngle: 0 };
+
+/*
+ * NOTE FOR FINAL POLISH:
+ * createSvgPlaceholderDataUri() generates an immediate labeled SVG badge whenever an image asset
+ * is missing or offline. Replace placeholder PNGs in /assets/ with final custom sprites before release.
+ */
+function createSvgPlaceholderDataUri(src) {
+  const clean = (src || 'ASSET').split('/').pop().replace('.png', '').toUpperCase().substring(0, 10);
+  let bg = '#1e3a5f', stroke = '#58a6ff', tag = 'PKMN';
+  if (src && src.includes('illumina')) { bg = '#4a2500'; stroke = '#ffd166'; tag = 'BOSS'; }
+  else if (src && src.includes('poachers')) { bg = '#4c111b'; stroke = '#f85149'; tag = 'SYND'; }
+  else if (src && src.includes('items')) { bg = '#1b4332'; stroke = '#3fb950'; tag = 'ITEM'; }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96">
+    <rect width="92" height="92" x="2" y="2" rx="12" fill="${bg}" stroke="${stroke}" stroke-width="4"/>
+    <text x="48" y="34" fill="${stroke}" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">[${tag}]</text>
+    <text x="48" y="56" fill="#ffffff" font-family="sans-serif" font-size="11" font-weight="bold" text-anchor="middle">${clean}</text>
+    <text x="48" y="76" fill="#cbd5e0" font-family="sans-serif" font-size="9" text-anchor="middle">PLACEHOLDER</text>
+  </svg>`;
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
 
 const spriteCache = {};
 function getSprite(src) {
-  if (!src) return null;
+  if (!src) src = '/assets/placeholders/placeholder_default.png';
   if (spriteCache[src]) return spriteCache[src].loaded ? spriteCache[src].img : null;
   const img = new Image();
   img.crossOrigin = "anonymous";
-  spriteCache[src] = { img, loaded: false };
-  img.onload = () => { spriteCache[src].loaded = true; drawBoard(); drawWheelFrame(); };
+  spriteCache[src] = { img, loaded: false, usedFallback: false };
+  img.onload = () => {
+    spriteCache[src].loaded = true;
+    drawBoard();
+    drawWheelFrame();
+  };
+  img.onerror = () => {
+    if (!spriteCache[src].usedFallback) {
+      spriteCache[src].usedFallback = true;
+      img.src = createSvgPlaceholderDataUri(src);
+    }
+  };
   img.src = src;
   return null;
 }
 
-let lastSeenSpinId = 0;
-let wheelAnim = { active: false, startTime: 0, duration: 4000, startAngle: 0, targetAngle: 0, currentAngle: 0 };
+function showToast(msg, isError = true) {
+  const banner = document.getElementById('toastBanner');
+  banner.style.background = isError ? 'rgba(218, 54, 51, 0.95)' : 'rgba(35, 134, 54, 0.95)';
+  banner.innerText = msg;
+  banner.style.display = 'block';
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => { banner.style.display = 'none'; }, 4000);
+}
 
-ws.onmessage = (event) => {
-  const msg = JSON.parse(event.data);
-  if (msg.type === 'ERROR') { alert(msg.msg); return; }
-  if (msg.type === 'STATE_UPDATE') {
-    gameState = msg.state;
-    if (!hasShownModal) { hasShownModal = true; openLibraryModal(); }
-    if (gameState.game_over_victory && !hasAutoOpenedVictory) {
-      hasAutoOpenedVictory = true;
-      setTimeout(() => openAlbumModal(), 1200);
+function connectWebSocket() {
+  const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(wsProto + '//' + location.host + '/ws');
+  const badge = document.getElementById('wsStatusBadge');
+
+  ws.onopen = () => {
+    badge.innerText = '🟢 LIVE';
+    badge.style.background = '#238636';
+  };
+
+  ws.onclose = () => {
+    badge.innerText = '🔴 RECONNECTING...';
+    badge.style.background = '#da3633';
+    setTimeout(connectWebSocket, 2000);
+  };
+
+  ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+    if (msg.type === 'ERROR') {
+      showToast(msg.msg, true);
+      return;
     }
-    const w = gameState.last_wheel;
-    if (w && w.spin_id > lastSeenSpinId) {
-      lastSeenSpinId = w.spin_id;
-      triggerWheelSpin(w);
-    } else {
-      drawWheelFrame();
+    if (msg.type === 'STATE_UPDATE') {
+      gameState = msg.state;
+      if (gameState.game_over_victory && !hasAutoOpenedVictory) {
+        hasAutoOpenedVictory = true;
+        setTimeout(() => openAlbumModal(), 1000);
+      }
+      const w = gameState.last_wheel;
+      if (w && w.spin_id > lastSeenSpinId) {
+        lastSeenSpinId = w.spin_id;
+        triggerWheelSpin(w);
+      } else {
+        drawWheelFrame();
+      }
+      renderUI();
+      drawBoard();
+      if (document.getElementById('libraryModal').style.display === 'flex') {
+        renderLibraryList();
+      }
     }
-    renderUI();
-    drawBoard();
-  }
-};
+  };
+}
 
 function sendAction(payload) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    showToast("WebSocket is still connecting—please wait a moment!", true);
+    return;
+  }
   payload.player_id = myPlayerId;
-  payload.join_code = document.getElementById('joinCode').value;
+  payload.join_code = document.getElementById('joinCode').value || 'CULANTRO2026';
   ws.send(JSON.stringify(payload));
 }
 
 function joinGame() {
+  const nameInput = document.getElementById('playerName');
+  const chosenName = nameInput.value.trim() || ('Ranger ' + Math.floor(10 + Math.random() * 89));
+  nameInput.value = chosenName;
   sendAction({
     action: 'JOIN_OR_EDIT',
-    name: document.getElementById('playerName').value || 'Trainer',
+    name: chosenName,
     role: document.getElementById('playerRole').value
   });
+  showToast(`Joined Culantro Region as ${chosenName}! Roll your movement die to start.`, false);
 }
 
 function sendChat() {
   const inp = document.getElementById('chatInput');
   if (!inp.value.trim()) return;
-  const me = gameState && gameState.players[myPlayerId] ? gameState.players[myPlayerId].name : 'Spectator';
-  sendAction({action: 'CHAT', sender: me, msg: inp.value});
+  const me = (gameState && gameState.players[myPlayerId]) ? gameState.players[myPlayerId].name : (document.getElementById('playerName').value.trim() || 'Spectator');
+  sendAction({ action: 'CHAT', sender: me, msg: inp.value.trim() });
   inp.value = '';
 }
 
 function openLibraryModal() { renderLibraryList(); document.getElementById('libraryModal').style.display = 'flex'; }
 function closeLibraryModal() { document.getElementById('libraryModal').style.display = 'none'; }
+
 function generateNewProceduralMap() {
-  const title = document.getElementById('customSeedInput').value;
+  const title = document.getElementById('customSeedInput').value.trim();
   const mode = document.getElementById('gameModeSelect').value;
-  sendAction({action: 'NEW_PROCEDURAL_MAP', custom_title: title, game_mode: mode});
+  sendAction({ action: 'NEW_PROCEDURAL_MAP', custom_title: title, game_mode: mode });
   closeLibraryModal();
 }
-function loadMapFromLibrary(mid) { sendAction({action: 'LOAD_MAP', map_id: mid}); closeLibraryModal(); }
-function deleteMapFromLibrary(mid) { if(confirm('Delete map session?')) sendAction({action: 'DELETE_MAP', map_id: mid}); }
+
+function loadMapFromLibrary(mid) {
+  sendAction({ action: 'LOAD_MAP', map_id: mid });
+  closeLibraryModal();
+}
+
+function deleteMapFromLibrary(mid) {
+  if (confirm('Delete this saved map session?')) {
+    sendAction({ action: 'DELETE_MAP', map_id: mid });
+  }
+}
 
 function renderLibraryList() {
   if (!gameState || !gameState.library) return;
@@ -255,15 +524,18 @@ function renderLibraryList() {
   gameState.library.forEach(item => {
     const row = document.createElement('div');
     row.className = 'player-card';
-    row.style.display = 'flex'; row.style.justifyContent = 'space-between'; row.style.alignItems = 'center';
+    row.style.display = 'flex';
+    row.style.justifyContent = 'space-between';
+    row.style.alignItems = 'center';
     const isCur = item.map_id === gameState.map_id;
-    row.innerHTML = `<div>
-        <strong style="color:${isCur?'#3fb950':'#58a6ff'};">${item.map_name} ${isCur?'(ACTIVE)':''}</strong>
-        <span class="badge" style="background:${item.status==='COMPLETED'?'#238636':'#6e40c9'}">${item.status}</span><br>
-        <span style="color:#8b949e;">Mode: <b>${(item.game_mode||'long_mode').toUpperCase()}</b> | Boss: ${item.commander_name}</span>
+    row.innerHTML = `
+      <div>
+        <strong style="color:${isCur ? '#3fb950' : '#58a6ff'};">${item.map_name} ${isCur ? '(ACTIVE)' : ''}</strong>
+        <span class="badge" style="background:${item.status === 'COMPLETED' ? '#238636' : '#6e40c9'}">${item.status}</span><br>
+        <span style="color:#8b949e;">Mode: <b>${(item.game_mode || 'long_mode').toUpperCase()}</b> | Commander: ${item.commander_name}</span>
       </div>
       <div style="display:flex; gap:6px;">
-        <button class="secondary" onclick="loadMapFromLibrary('${item.map_id}')">▶️ Play</button>
+        <button class="secondary" onclick="loadMapFromLibrary('${item.map_id}')">▶️ Load</button>
         ${item.map_id !== 'classic_culantro' ? `<button class="warn" onclick="deleteMapFromLibrary('${item.map_id}')">🗑️ Delete</button>` : ''}
       </div>`;
     container.appendChild(row);
@@ -280,7 +552,7 @@ function renderAlbumGallery() {
   const photos = gameState.photos || [];
   document.getElementById('albumSubtitle').innerText = `${gameState.map_name} — ${photos.length} Highlights B-Roll Captures`;
   if (photos.length === 0) {
-    gal.innerHTML = `<div class="player-card" style="grid-column: 1 / -1; text-align:center; padding:24px;">No B-Roll highlights captured yet!</div>`;
+    gal.innerHTML = `<div class="player-card" style="grid-column: 1 / -1; text-align:center; padding:24px;">No B-Roll highlights captured yet! Partner with wild Pokémon or challenge a Sanctuary Boss to snap photos.</div>`;
     return;
   }
   photos.forEach(ph => {
@@ -288,15 +560,15 @@ function renderAlbumGallery() {
     card.className = 'polaroid';
     card.innerHTML = `
       <div class="polaroid-stage">
-        <img src="${ph.player_sprite}" alt="Player">
-        <div style="color:#ffd166; font-weight:bold; font-size:12px; text-align:center;">VS<br><span style="font-size:10px; color:#fff;">${Math.round(ph.win_prob*100)}%</span></div>
-        <img src="${ph.enemy_sprite}" alt="Target">
+        <img src="${ph.player_sprite}" onerror="this.src=createSvgPlaceholderDataUri('${ph.player_sprite}')" alt="Player">
+        <div style="color:#ffd166; font-weight:bold; font-size:12px; text-align:center;">VS<br><span style="font-size:10px; color:#fff;">${Math.round(ph.win_prob * 100)}%</span></div>
+        <img src="${ph.enemy_sprite}" onerror="this.src=createSvgPlaceholderDataUri('${ph.enemy_sprite}')" alt="Target">
       </div>
       <div style="display:flex; justify-content:space-between; font-size:11px; color:#b8860b; font-weight:bold;">
         <span>${ph.stars}</span><span>Round ${ph.round}</span>
       </div>
       <strong style="font-size:13px; color:#111;">#${ph.id} ${ph.title}</strong>
-      <div style="font-size:11.5px; color:#444;">${ph.caption}</div>
+      <div style="font-size:11.5px; color:#444; margin-bottom:10px;">${ph.caption}</div>
       <div class="watermark">© ${ph.watermark || 'Culantro Ranger'}</div>
     `;
     gal.appendChild(card);
@@ -304,28 +576,46 @@ function renderAlbumGallery() {
 }
 
 function downloadSnapPosterPNG() {
-  if (!gameState || !gameState.photos || gameState.photos.length === 0) { alert("No photos to export!"); return; }
+  if (!gameState || !gameState.photos || gameState.photos.length === 0) {
+    showToast("No photos in B-Roll album to export yet!", true);
+    return;
+  }
   const photos = gameState.photos;
   const cols = Math.min(3, photos.length), rows = Math.ceil(photos.length / cols);
   const cardW = 300, cardH = 230, pad = 20;
   const outCanvas = document.createElement('canvas');
-  outCanvas.width = cols * (cardW + pad) + pad; outCanvas.height = 90 + rows * (cardH + pad) + pad;
+  outCanvas.width = cols * (cardW + pad) + pad;
+  outCanvas.height = 90 + rows * (cardH + pad) + pad;
   const oCtx = outCanvas.getContext('2d');
-  oCtx.fillStyle = '#0d131a'; oCtx.fillRect(0, 0, outCanvas.width, outCanvas.height);
-  oCtx.fillStyle = '#ffd166'; oCtx.font = 'bold 22px sans-serif';
+  oCtx.fillStyle = '#0d131a';
+  oCtx.fillRect(0, 0, outCanvas.width, outCanvas.height);
+  oCtx.fillStyle = '#ffd166';
+  oCtx.font = 'bold 22px sans-serif';
   oCtx.fillText(`CULANTRO HIGHLIGHTS B-ROLL: ${gameState.map_name.toUpperCase()}`, pad, 42);
 
   photos.forEach((ph, idx) => {
     const c = idx % cols, r = Math.floor(idx / cols);
     const x = pad + c * (cardW + pad), y = 90 + r * (cardH + pad);
-    oCtx.fillStyle = '#f8f9fa'; oCtx.fillRect(x, y, cardW, cardH);
-    oCtx.fillStyle = '#16425b'; oCtx.fillRect(x + 12, y + 12, cardW - 24, 105);
-    const pImg = getSprite(ph.player_sprite); if(pImg) oCtx.drawImage(pImg, x + 32, y + 25, 72, 72);
-    const eImg = getSprite(ph.enemy_sprite); if(eImg) oCtx.drawImage(eImg, x + cardW - 104, y + 25, 72, 72);
-    oCtx.fillStyle = '#b8860b'; oCtx.font = 'bold 11px sans-serif'; oCtx.fillText(ph.stars, x + 12, y + 135);
-    oCtx.fillStyle = '#111'; oCtx.font = 'bold 13px sans-serif'; oCtx.fillText(ph.title.substring(0, 32), x + 12, y + 155);
-    oCtx.fillStyle = '#333'; oCtx.font = '11px sans-serif'; oCtx.fillText(ph.caption.substring(0, 44), x + 12, y + 178);
-    oCtx.fillStyle = '#666'; oCtx.font = 'italic 10px sans-serif'; oCtx.fillText(`© ${ph.watermark || 'Ranger'}`, x + cardW - 90, y + cardH - 10);
+    oCtx.fillStyle = '#f8f9fa';
+    oCtx.fillRect(x, y, cardW, cardH);
+    oCtx.fillStyle = '#16425b';
+    oCtx.fillRect(x + 12, y + 12, cardW - 24, 105);
+    const pImg = getSprite(ph.player_sprite);
+    if (pImg) oCtx.drawImage(pImg, x + 32, y + 25, 72, 72);
+    const eImg = getSprite(ph.enemy_sprite);
+    if (eImg) oCtx.drawImage(eImg, x + cardW - 104, y + 25, 72, 72);
+    oCtx.fillStyle = '#b8860b';
+    oCtx.font = 'bold 11px sans-serif';
+    oCtx.fillText(ph.stars, x + 12, y + 135);
+    oCtx.fillStyle = '#111';
+    oCtx.font = 'bold 13px sans-serif';
+    oCtx.fillText(ph.title.substring(0, 32), x + 12, y + 155);
+    oCtx.fillStyle = '#333';
+    oCtx.font = '11px sans-serif';
+    oCtx.fillText(ph.caption.substring(0, 44), x + 12, y + 178);
+    oCtx.fillStyle = '#666';
+    oCtx.font = 'italic 10px sans-serif';
+    oCtx.fillText(`© ${ph.watermark || 'Ranger'}`, x + cardW - 95, y + cardH - 10);
   });
   const link = document.createElement('a');
   link.download = `Culantro_Highlights_BRoll_${gameState.map_id}.png`;
@@ -333,31 +623,384 @@ function downloadSnapPosterPNG() {
   link.click();
 }
 
+function renderPlayerBag(me) {
+  const roleBox = document.getElementById('roleAbilityContainer');
+  const bagBox = document.getElementById('playerBagContainer');
+  const countLbl = document.getElementById('bagCountLabel');
+
+  if (!me) {
+    countLbl.innerText = 'Not Joined';
+    roleBox.innerHTML = `<div style="color:#8b949e; font-size:11.5px;">Enter your Trainer Name at the top right and click <b>✅ Join / Edit</b> to unlock your personal item bag and role ability!</div>`;
+    bagBox.innerHTML = '';
+    return;
+  }
+
+  const items = me.items || [];
+  countLbl.innerText = `${items.length}/6 Items`;
+  const roleMeta = (gameState.roles_meta && gameState.roles_meta[me.role]) || { name: me.role, desc: '' };
+
+  roleBox.innerHTML = `
+    <button class="purple" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center;"
+            onclick="sendAction({action:'USE_ABILITY_OR_ITEM', kind:'ROLE_ABILITY'})"
+            title="${roleMeta.desc}">
+      <span>✨ <b>${roleMeta.name} Ability</b>: ${roleMeta.desc.split('|')[0]}</span>
+      <span class="badge" style="background:rgba(0,0,0,0.35); margin:0;">${me.ability_used_this_round ? 'USED' : 'READY'}</span>
+    </button>
+  `;
+
+  if (items.length === 0) {
+    bagBox.innerHTML = `<div style="grid-column:1/-1; color:#8b949e; font-size:11.5px; text-align:center; padding:6px;">Your backpack is empty! Move onto a blue <b>Outpost</b> node to resupply items.</div>`;
+    return;
+  }
+
+  bagBox.innerHTML = '';
+  items.forEach((ikey) => {
+    const meta = (gameState.items_meta && gameState.items_meta[ikey]) || {
+      name: ikey,
+      sprite: '/assets/items/item_fluffruit.png',
+      desc: 'Tactical Ranger Item'
+    };
+    const btn = document.createElement('button');
+    btn.className = 'bag-item-btn';
+    btn.title = meta.desc || meta.name;
+    btn.onclick = () => sendAction({ action: 'USE_ABILITY_OR_ITEM', kind: ikey });
+    btn.innerHTML = `
+      <img src="${meta.sprite}" onerror="this.src=createSvgPlaceholderDataUri('${meta.sprite}')" alt="${meta.name}">
+      <div style="overflow:hidden;">
+        <div style="font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${meta.name}</div>
+        <div style="font-size:10px; color:#8b949e;">Click to use</div>
+      </div>
+    `;
+    bagBox.appendChild(btn);
+  });
+}
+
 function renderUI() {
   if (!gameState) return;
   document.getElementById('mapTitleHeader').innerText = gameState.map_name.toUpperCase();
   document.getElementById('roundBadge').innerText = 'Round ' + gameState.round_num;
   document.getElementById('photoCount').innerText = (gameState.photos || []).length;
+
+  const playersArr = Object.values(gameState.players || {});
+  document.getElementById('playerCountLabel').innerText = playersArr.length;
+
   const me = gameState.players[myPlayerId];
   if (me) {
-    document.getElementById('modeBadge').innerText = 'PLAYING: ' + me.name;
+    document.getElementById('modeBadge').innerText = `RANGER: ${me.name} (${me.moves_left} STEPS)`;
     document.getElementById('modeBadge').style.background = '#238636';
+  } else {
+    document.getElementById('modeBadge').innerText = 'SPECTATOR (CLICK JOIN)';
+    document.getElementById('modeBadge').style.background = 'rgba(56, 139, 253, 0.25)';
   }
+
+  renderPlayerBag(me);
+
   const pList = document.getElementById('playersList');
   pList.innerHTML = '';
-  Object.values(gameState.players).forEach(p => {
-    const teamHtml = p.team.map(pk =>
-      `<div style="display:flex; align-items:center; gap:4px; background:#162230; padding:2px 6px; border-radius:6px; opacity:${pk.fainted?0.45:1};">
-         <img class="mini-sprite" src="${pk.sprite}">
-         <span><b>${pk.name}</b> (Lvl ${pk.level || 1}, BP ${pk.bp})</span>
-       </div>`
-    ).join('');
-    const card = document.createElement('div');
-    card.className = 'player-card';
-    card.innerHTML = `<div><strong>${p.name}</strong> <span style="color:#58a6ff;">[${p.role.toUpperCase()}]</span></div>
-      <div style="color:#8b949e; margin:2px 0;">📍 ${gameState.nodes[p.node].name} | Steps: <b>${p.moves_left}</b></div>
-      <div class="sprite-row">${teamHtml}</div>`;
-    pList.appendChild(card);
+  if (playersArr.length === 0) {
+    pList.innerHTML = `<div class="player-card" style="color:#8b949e; text-align:center;">No Rangers in the party yet. Click <b>✅ Join / Edit</b> at the top right or click <b>🤖 + Bot</b>!</div>`;
+  } else {
+    playersArr.forEach(p => {
+      const isMe = p.id === myPlayerId;
+      const teamHtml = (p.team || []).map((pk, idx) => `
+        <div style="display:flex; align-items:center; gap:4px; background:#162230; padding:3px 6px; border-radius:6px; border:1px solid rgba(255,255,255,0.08); opacity:${pk.fainted ? 0.45 : 1};">
+          <img class="mini-sprite" src="${pk.sprite}" onerror="this.src=createSvgPlaceholderDataUri('${pk.sprite}')">
+          <div>
+            <div><b>${pk.name}</b> <span style="color:#ffd166;">BP ${pk.bp}</span></div>
+            <div style="font-size:10px; color:#8b949e;">Lvl ${pk.level || 1} (${pk.exp || 0}/25 EXP) ${pk.fainted ? '• KO' : ''}</div>
+          </div>
+          ${(isMe && p.team.length > 1) ? `<button class="warn" style="padding:1px 5px; font-size:10px; margin-left:2px;" onclick="sendAction({action:'RELEASE_POKEMON', index:${idx}})" title="Release partner">✕</button>` : ''}
+        </div>
+      `).join('');
+
+      const nodeObj = gameState.nodes[p.node] || { name: 'Base Camp' };
+      const card = document.createElement('div');
+      card.className = 'player-card' + (isMe ? ' active-me' : '');
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong>${p.name} ${isMe ? '(YOU)' : ''} ${p.is_bot ? '🤖' : ''}</strong>
+          <span style="color:#58a6ff; font-weight:700; font-size:11px;">[${p.role.toUpperCase()}]</span>
+        </div>
+        <div style="color:#8b949e; margin:3px 0;">
+          📍 <b>${nodeObj.name}</b> | Steps: <b style="color:#3fb950;">${p.moves_left}</b>
+          ${p.ready_next_round ? '<span class="badge" style="background:#238636; font-size:10px;">LOCKED</span>' : ''}
+        </div>
+        <div class="sprite-row">${teamHtml}</div>
+        <div style="font-size:11px; color:#8b949e; margin-top:4px;">🎒 Bag: ${(p.items || []).length} items</div>
+      `;
+      pList.appendChild(card);
+    });
+  }
+
+  // Render Syndicate Radar & Illumina Sanctuary Status
+  const poachList = document.getElementById('poachersList');
+  poachList.innerHTML = '';
+  const hqCard = document.createElement('div');
+  hqCard.className = 'player-card';
+  hqCard.innerHTML = `
+    <strong style="color:#f85149;">🏰 Syndicate HQ: ${gameState.commander_name}</strong><br>
+    <span style="color:#8b949e;">Star Siege: <b>${gameState.amplification_star_active ? 'ACTIVE ✡️' : 'Dormant (Calm 6 Illumina)'}</b></span>
+  `;
+  poachList.appendChild(hqCard);
+
+  Object.values(gameState.nodes).forEach(nd => {
+    const sb = nd.syndicate_boss;
+    const ib = nd.boss;
+    if (sb && !sb.defeated) {
+      const c = document.createElement('div');
+      c.className = 'player-card';
+      c.style.borderColor = '#f85149';
+      c.innerHTML = `<strong style="color:#ff7b72;">⚔️ ${sb.name}</strong> (${sb.tactical_position || 'Frontline'})<br><span style="color:#8b949e;">📍 ${nd.name} | BP ${sb.bp}</span>`;
+      poachList.appendChild(c);
+    } else if (nd.type === 'illumina' && ib) {
+      const c = document.createElement('div');
+      c.className = 'player-card';
+      c.innerHTML = `<strong style="color:${ib.calmed ? '#3fb950' : '#ffd166'};">${ib.calmed ? '✅' : '🌟'} ${ib.name}</strong> [BP ${Math.max(4, ib.bp - (ib.soothed || 0))}]<br><span style="color:#8b949e;">📍 ${nd.name} (${ib.calmed ? 'Calmed' : 'Agitated'})</span>`;
+      poachList.appendChild(c);
+    }
   });
 
-  const poachList = document
+  // Render Team Radio & Co-op Log
+  const cBox = document.getElementById('chatBox');
+  cBox.innerHTML = (gameState.chat_log || []).map(c => {
+    const isRadio = c.sender.includes("RADIO") || c.sender.includes("Captain") || c.sender.includes("Syndicate") || c.sender.includes("Grunt") || c.sender.includes("ALERT");
+    return `<div style="margin-bottom:4px; color:${isRadio ? '#ff7b72' : '#e6edf3'};"><b>${c.sender}:</b> ${c.msg}</div>`;
+  }).join('');
+  cBox.scrollTop = cBox.scrollHeight;
+}
+
+const wCanvas = document.getElementById('wheelCanvas');
+const wCtx = wCanvas.getContext('2d');
+
+function triggerWheelSpin(w) {
+  wheelAnim.active = true;
+  wheelAnim.startTime = performance.now();
+  wheelAnim.startAngle = wheelAnim.currentAngle % (Math.PI * 2);
+  wheelAnim.targetAngle = (Math.PI * 2 * 6) - (Math.PI / 2) - (w.roll_val * Math.PI * 2);
+  requestAnimationFrame(stepWheelAnimation);
+}
+
+function stepWheelAnimation(now) {
+  if (!wheelAnim.active) return;
+  const t = Math.min(1.0, (now - wheelAnim.startTime) / wheelAnim.duration);
+  wheelAnim.currentAngle = wheelAnim.startAngle + (wheelAnim.targetAngle - wheelAnim.startAngle) * (1 - Math.pow(1 - t, 4));
+  drawWheelFrame();
+  if (t < 1.0) {
+    requestAnimationFrame(stepWheelAnimation);
+  } else {
+    wheelAnim.active = false;
+    const w = gameState.last_wheel;
+    document.getElementById('wheelStatus').innerHTML = `
+      <strong>${w.title}</strong><br>
+      Squad BP: <b>${w.player_bp}</b> vs Boss BP: <b>${w.enemy_bp}</b> (${Math.round(w.win_prob * 100)}%)<br>
+      Outcome: <b style="color:${w.result === 'VICTORY' ? '#3fb950' : '#f85149'};">${w.result}!</b>
+    `;
+  }
+}
+
+function drawWheelFrame() {
+  wCtx.clearRect(0, 0, wCanvas.width, wCanvas.height);
+  const w = (gameState && gameState.last_wheel) ? gameState.last_wheel : { win_prob: 0.5, player_bp: 10, enemy_bp: 10 };
+  const cx = wCanvas.width / 2, cy = wCanvas.height / 2 + 8, radius = 76;
+  const winSlice = (w.win_prob || 0.5) * Math.PI * 2, rot = wheelAnim.currentAngle;
+
+  wCtx.beginPath();
+  wCtx.moveTo(cx, cy);
+  wCtx.arc(cx, cy, radius, rot, rot + winSlice);
+  wCtx.closePath();
+  wCtx.fillStyle = '#238636';
+  wCtx.fill();
+  wCtx.strokeStyle = '#ffffff';
+  wCtx.stroke();
+
+  wCtx.beginPath();
+  wCtx.moveTo(cx, cy);
+  wCtx.arc(cx, cy, radius, rot + winSlice, rot + Math.PI * 2);
+  wCtx.closePath();
+  wCtx.fillStyle = '#da3633';
+  wCtx.fill();
+  wCtx.stroke();
+
+  // Pointer triangle at top
+  wCtx.beginPath();
+  wCtx.moveTo(cx, cy - radius + 5);
+  wCtx.lineTo(cx - 9, cy - radius - 12);
+  wCtx.lineTo(cx + 9, cy - radius - 12);
+  wCtx.closePath();
+  wCtx.fillStyle = '#ffd166';
+  wCtx.fill();
+
+  const pImg = getSprite(w.player_sprite);
+  if (pImg) wCtx.drawImage(pImg, 10, 10, 42, 42);
+  const eImg = getSprite(w.enemy_sprite);
+  if (eImg) wCtx.drawImage(eImg, wCanvas.width - 52, 10, 42, 42);
+}
+
+const canvas = document.getElementById('boardCanvas');
+const ctx = canvas.getContext('2d');
+let hoveredNode = null;
+
+canvas.addEventListener('mousemove', (e) => {
+  if (!gameState) return;
+  const rect = canvas.getBoundingClientRect();
+  const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
+  hoveredNode = null;
+  Object.entries(gameState.nodes).forEach(([nid, nd]) => {
+    if (Math.hypot(cx - nd.x, cy - nd.y) <= 28) {
+      hoveredNode = { id: parseInt(nid), ...nd };
+    }
+  });
+  const tBox = document.getElementById('tooltipBox');
+  if (hoveredNode) {
+    tBox.style.display = 'block';
+    tBox.style.left = Math.min(window.innerWidth - 270, e.clientX + 14) + 'px';
+    tBox.style.top = Math.min(window.innerHeight - 110, e.clientY + 14) + 'px';
+    const activeBoss = hoveredNode.syndicate_boss || hoveredNode.boss;
+    tBox.innerHTML = `
+      <strong>#${hoveredNode.id} ${hoveredNode.name}</strong><br>
+      Biome: <b>${hoveredNode.region || 'Culantro'}</b> | Type: <b>${hoveredNode.type.toUpperCase()}</b>
+      ${activeBoss ? `<br>Target: <b style="color:#ffd166;">${activeBoss.name}</b> (BP ${Math.max(4, activeBoss.bp - (activeBoss.soothed || 0))})` : ''}
+      <br><span style="color:#58a6ff;">Click node to move here if connected!</span>
+    `;
+  } else {
+    tBox.style.display = 'none';
+  }
+});
+
+canvas.addEventListener('mouseleave', () => {
+  document.getElementById('tooltipBox').style.display = 'none';
+});
+
+canvas.addEventListener('click', (e) => {
+  if (!gameState) return;
+  const rect = canvas.getBoundingClientRect();
+  const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
+  Object.entries(gameState.nodes).forEach(([nid, nd]) => {
+    if (Math.hypot(cx - nd.x, cy - nd.y) <= 32) {
+      sendAction({ action: 'MOVE_NODE', target_node: parseInt(nid) });
+    }
+  });
+});
+
+function drawBoard() {
+  if (!gameState) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (gameState.map_shroud === 'DARKNESS_SHROUD') {
+    ctx.fillStyle = 'rgba(8, 5, 18, 0.72)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  const me = gameState.players ? gameState.players[myPlayerId] : null;
+  const myEdges = (me && gameState.nodes[me.node]) ? gameState.nodes[me.node].edges : [];
+
+  // Draw Node Connection Lines
+  Object.entries(gameState.nodes).forEach(([nid, nd]) => {
+    (nd.edges || []).forEach(targetId => {
+      const target = gameState.nodes[targetId];
+      if (!target) return;
+      const isHighlighted = me && (parseInt(nid) === me.node || targetId === me.node) && myEdges.includes(parseInt(nid) === me.node ? targetId : parseInt(nid));
+      ctx.beginPath();
+      ctx.moveTo(nd.x, nd.y);
+      ctx.lineTo(target.x, target.y);
+      ctx.strokeStyle = isHighlighted ? 'rgba(63, 185, 80, 0.85)' : 'rgba(72, 202, 228, 0.38)';
+      ctx.lineWidth = isHighlighted ? 3.5 : 2.2;
+      ctx.stroke();
+    });
+  });
+
+  // Draw Amplification Star Hexagram Ley-Lines if active
+  if (gameState.amplification_star_active && gameState.nodes["17"]) {
+    const fNode = gameState.nodes["17"];
+    ctx.save();
+    ctx.strokeStyle = 'rgba(248, 81, 73, 0.75)';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([6, 4]);
+    (fNode.edges || []).forEach(eid => {
+      const en = gameState.nodes[eid];
+      if (en) {
+        ctx.beginPath();
+        ctx.moveTo(fNode.x, fNode.y);
+        ctx.lineTo(en.x, en.y);
+        ctx.stroke();
+      }
+    });
+    ctx.restore();
+  }
+
+  // Draw Map Nodes
+  Object.entries(gameState.nodes).forEach(([nid, nd]) => {
+    const activeBoss = nd.syndicate_boss || nd.boss;
+    const r = activeBoss ? 27 : 22;
+    const isReachable = me && me.moves_left > 0 && myEdges.includes(parseInt(nid));
+
+    if (isReachable) {
+      ctx.beginPath();
+      ctx.arc(nd.x, nd.y, r + 6, 0, Math.PI * 2);
+      ctx.strokeStyle = '#3fb950';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    ctx.beginPath();
+    ctx.arc(nd.x, nd.y, r, 0, Math.PI * 2);
+    if (nd.syndicate_boss && !nd.syndicate_boss.defeated) ctx.fillStyle = '#da3633';
+    else if (nd.type === 'outpost') ctx.fillStyle = '#1f6feb';
+    else if (nd.type === 'wild') ctx.fillStyle = '#6e40c9';
+    else if (nd.type === 'illumina') ctx.fillStyle = (nd.boss && nd.boss.calmed) ? '#238636' : '#b85d00';
+    else ctx.fillStyle = '#da3633';
+    ctx.fill();
+    ctx.lineWidth = 2.2;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+
+    const spriteUrl = activeBoss ? activeBoss.sprite : nd.sprite;
+    const img = getSprite(spriteUrl);
+    if (img) {
+      const sSz = activeBoss ? 44 : 32;
+      ctx.drawImage(img, nd.x - sSz / 2, nd.y - sSz / 2, sSz, sSz);
+    }
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 10.5px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(nd.name, nd.x, nd.y - r - 7);
+    if (activeBoss && !activeBoss.calmed && !activeBoss.defeated) {
+      ctx.fillStyle = '#ffd166';
+      ctx.font = 'bold 9.5px sans-serif';
+      ctx.fillText(`${activeBoss.name} [BP ${Math.max(4, activeBoss.bp - (activeBoss.soothed || 0))}]`, nd.x, nd.y + r + 13);
+    }
+  });
+
+  // Draw Ranger Tokens
+  Object.values(gameState.players || {}).forEach((p, idx) => {
+    const nd = gameState.nodes[p.node];
+    if (!nd) return;
+    const ang = idx * (Math.PI / 3);
+    const tx = nd.x + Math.cos(ang) * 28, ty = nd.y + Math.sin(ang) * 28;
+    ctx.beginPath();
+    ctx.arc(tx, ty, 13, 0, Math.PI * 2);
+    ctx.fillStyle = p.id === myPlayerId ? '#2ea043' : (p.is_bot ? '#6e40c9' : '#1f6feb');
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#ffd166';
+    ctx.stroke();
+
+    if (p.team && p.team[0]) {
+      const lImg = getSprite(p.team[0].sprite);
+      if (lImg) ctx.drawImage(lImg, tx - 14, ty - 14, 28, 28);
+    }
+    ctx.fillStyle = '#ffd166';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(p.name, tx, ty + 22);
+  });
+}
+
+connectWebSocket();
+drawWheelFrame();
+</script>
+</body>
+</html>
